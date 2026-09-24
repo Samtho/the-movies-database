@@ -1,0 +1,39 @@
+@import "tailwindcss";
+
+/* ---------- Cine nocturno: sala oscura, marquesina ámbar ---------- */
+@theme {
+  --color-stage: #0a0a0d;        /* negro de sala */
+  --color-stage-soft: #141419;   /* paneles */
+  --color-ivory: #f2ede1;        /* texto principal */
+  --color-ivory-dim: #b6b0a2;    /* secundario */
+  --color-faint: #6e695e;        /* metadatos */
+  --color-hairline: #26262e;     /* lineas */
+  --color-marquee: #f0b429;      /* ámbar de marquesina */
+  --color-marquee-deep: #c98f12;
+  --color-blood: #e0563f;        /* rojo butaca */
+  --color-leaf: #58c99a;         /* positivo */
+  --font-display: "Bodoni Moda", "Didot", Georgia, serif;
+  --font-sans: "Archivo", system-ui, sans-serif;
+}
+html { background: var(--color-stage); }
+body {
+  background: var(--color-stage); color: var(--color-ivory);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+}
+::selection { background: var(--color-marquee); color: #1a1408; }
+.font-display { font-family: var(--font-display); }
+.kicker { font-size: 12px; letter-spacing: 0.26em; text-transform: uppercase; color: var(--color-marquee); font-weight: 700; }
+
+/* grano de celuloide */
+.grain::after {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 90; opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+}
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+/* luz de marquesina bajo el nav */
+.marquee-glow { box-shadow: 0 12px 60px -18px rgba(240,180,41,.25); }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
