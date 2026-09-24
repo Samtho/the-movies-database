@@ -16,6 +16,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import ssl
 import sys
 import threading
 import time
@@ -64,15 +65,27 @@ def clave_api(env_path: Path = Path(".env")) -> str:
     return clave
 
 
+def contexto_ssl() -> ssl.SSLContext:
+    """Certificados de certifi: el Python de python.org en macOS no usa los del sistema
+    y, sin esto, toda petición HTTPS falla con CERTIFICATE_VERIFY_FAILED."""
+    try:
+        import certifi
+        return ssl.create_default_context(cafile=certifi.where())
+    except ImportError:
+        return ssl.create_default_context()
+
+
 def crear_pedidor(clave: str, intentos: int = 4, espera: float = 1.0,
                   abrir: Callable[..., Any] = urllib.request.urlopen, dormir: Callable[[float], None] = time.sleep) -> Pedidor:
     """GET a la API con reintentos (red, 429 y 5xx, con espera creciente). Un 404 no se reintenta."""
+    contexto = contexto_ssl()
+
     def pedir(ruta: str, parametros: dict[str, str]) -> dict[str, Any]:
         url = f"{API}{ruta}?{urllib.parse.urlencode({**parametros, 'api_key': clave})}"
         ultimo: Exception | None = None
         for intento in range(intentos):
             try:
-                with abrir(url, timeout=15) as r:
+                with abrir(url, timeout=15, context=contexto) as r:
                     return json.load(r)
             except urllib.error.HTTPError as e:
                 if e.code == 404:

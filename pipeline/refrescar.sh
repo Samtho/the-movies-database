@@ -38,13 +38,13 @@ echo "Usando: $export_trakt"
 # ---------- 2. Python ----------
 paso "2/4 · Preparando Python"
 python=""
-for p in python3.13 python3.12 python3.11 python3; do
+for p in python3.13 python3.14 python3.12 python3.11 python3; do
   if command -v "$p" >/dev/null 2>&1 && "$p" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)' 2>/dev/null; then
     python="$p"
     break
   fi
 done
-[ -n "$python" ] || fallo "Hace falta Python 3.11 o superior. Instálalo con: brew install python@3.12  (y vuelve a lanzar este comando)"
+[ -n "$python" ] || fallo "Hace falta Python 3.11 o superior (el de macOS es más antiguo). Descárgalo de https://www.python.org/downloads/ (botón amarillo), instálalo con doble clic y vuelve a lanzar este comando en una Terminal nueva."
 if [ ! -x .venv/bin/python ]; then
   echo "Primera vez: creando el entorno con $("$python" --version)…"
   "$python" -m venv .venv

@@ -22,7 +22,8 @@ def abridor(secuencia):
     """Simula urlopen: cada llamada consume el siguiente elemento (excepción o dict)."""
     llamadas = []
 
-    def abrir(url, timeout):
+    def abrir(url, timeout, context=None):
+        assert context is not None  # siempre con certificados explícitos (python.org en macOS)
         llamadas.append(url)
         item = secuencia.pop(0)
         if isinstance(item, Exception):
