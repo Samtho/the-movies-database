@@ -32,6 +32,7 @@ export default function FichaModal({ id, onClose, onOpen, onPersona }: {
         <Poster ruta={f.p} ancho={342} alt={f.t} diferida={false} className="w-52 md:w-72 rounded-2xl border border-hairline shadow-2xl self-start" />
         <div className="flex-1 min-w-0">
           <h3 className="font-display font-semibold leading-tight pr-10" style={{ fontSize: "clamp(1.9rem, 3.4vw, 3rem)" }}>{f.t}</h3>
+          {f.te && <p className="text-sm text-faint mt-1">En español: {f.te}</p>}
           <p className="text-[15px] text-ivory-dim mt-2">
             {f.a} · {f.g.map(generoEs).join(" · ")}{f.rt ? ` · ${f.rt} min` : ""}
             {f.va ? ` · ★ ${formatoNumero(f.va, 1)} (${formatoNumero(f.nv)} votos)` : ""}

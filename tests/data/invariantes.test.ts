@@ -28,6 +28,10 @@ describe("candidatas de 'Esta noche'", () => {
     const desordenadas = gusto.candidatos.filter((c, i) => i > 0 && c.s > gusto.candidatos[i - 1].s);
     expect(desordenadas).toEqual([]);
   });
+  it("5b. el backtest conservador nunca supera a su techo", () => {
+    expect(gusto.backtest.top10).toBeLessThanOrEqual(gusto.backtest.techo.top10);
+    expect(gusto.segunda_etapa.notas).toBeLessThanOrEqual(gusto.segunda_etapa.notas_totales);
+  });
   it("5. sus porqués apuntan a la leyenda", () => {
     const fuera = gusto.candidatos.filter((c) => c.r.some((i) => i < 0 || i >= gusto.leyenda.length));
     expect(fuera).toEqual([]);
@@ -87,14 +91,15 @@ describe("stats", () => {
     const sumaMensual = stats.mensual.reduce((a, [, n]) => a + n, 0);
     const sumaDiaHora = stats.semana_hora.flat().reduce((a, n) => a + n, 0);
     expect(sumaMensual).toBe(stats.plays);
-    expect(sumaDiaHora).toBe(stats.plays);
+    expect(sumaDiaHora).toBe(stats.horas_registradas); // solo los visionados con hora real
+    expect(stats.horas_registradas).toBeLessThanOrEqual(stats.plays);
     expect(stats.total_vistas).toBe(Object.keys(vistas).length);
     expect(stats.match_dataset + stats.post2017).toBe(stats.total_vistas);
   });
   it("14. los derivados coinciden con su fuente", () => {
     expect(stats.resumen.universo).toBe(galaxia.length);
     expect(stats.resumen.modelos).toBe(Object.keys(gusto.benchmark).length);
-    expect(stats.resumen.auc).toBeCloseTo(gusto.auc_amplio[0], 3);
+    expect(stats.resumen.auc).toBeCloseTo(gusto.auc_cv[0], 3);
     expect(stats.muro.filter((m) => fichas[String(m.id)]?.p !== m.p)).toEqual([]);
   });
   it("15. ninguna fecha de visionado es futura", () => {

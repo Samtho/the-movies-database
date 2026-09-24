@@ -50,9 +50,9 @@ export function elegirSorpresa(lista: readonly CandidataConFicha[], azar: () => 
   return top[i].id;
 }
 
-// Búsqueda por título (sin tildes ni mayúsculas); primero las más votadas.
+// Búsqueda por título original o en español (sin tildes ni mayúsculas); primero las más votadas.
 export function buscarPeliculas(fichas: Fichas, consulta: string, limite = 6): [number, Ficha][] {
   const res: [number, Ficha][] = [];
-  for (const [id, f] of Object.entries(fichas)) if (coincide(consulta, f.t)) res.push([Number(id), f]);
+  for (const [id, f] of Object.entries(fichas)) if (coincide(consulta, f.t, f.te)) res.push([Number(id), f]);
   return res.sort((a, b) => b[1].nv - a[1].nv).slice(0, limite);
 }

@@ -30,10 +30,13 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
-      - name: Tests del pipeline (pytest)
+          cache: pip
+          cache-dependency-path: pipeline/requirements.txt
+      - name: Tests del pipeline (pytest, con datos sintéticos)
+        working-directory: pipeline
         run: |
-          python -m pip install --quiet pytest
-          python -m pytest pipeline/tests -q
+          python -m pip install --quiet -r requirements.txt
+          python -m pytest -q
       - name: Lint
         run: npm run lint
       - name: Tipos (strict)

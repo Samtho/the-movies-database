@@ -2,7 +2,7 @@
 
 Se ejecuta después de generar los 8 JSON y es idempotente:
 
-    python3 pipeline/derivar_front.py public/data
+    cd pipeline && python3 -m atlas.derivar_front ../public/data  (también lo llama atlas.actualizar)
 
 - similares.json: quita las autorreferencias (una película nunca es "similar" de sí misma).
 - stats.json:
@@ -68,7 +68,7 @@ def muro_portada(stats: dict[str, Any], fichas: dict[str, Any], maximo: int = MU
 
 
 def resumen(galaxia: list[dict[str, Any]], gusto: dict[str, Any]) -> dict[str, Any]:
-    auc, auc_std = gusto["auc_amplio"]
+    auc, auc_std = gusto["auc_cv"]
     return {
         "universo": len(galaxia),
         "auc": round(float(auc), 3),
@@ -77,25 +77,25 @@ def resumen(galaxia: list[dict[str, Any]], gusto: dict[str, Any]) -> dict[str, A
     }
 
 
-def derivar(data_dir: Path) -> None:
-    def leer(nombre: str) -> Any:
-        return json.loads((data_dir / f"{nombre}.json").read_text(encoding="utf-8"))
-
-    def escribir(nombre: str, contenido: Any) -> None:
-        (data_dir / f"{nombre}.json").write_text(json.dumps(contenido), encoding="utf-8")
-
-    fichas = leer("fichas")
-    stats = leer("stats")
-
-    escribir("similares", sanear_similares(leer("similares")))
-
+def aplicar_derivados(datos: dict[str, Any]) -> None:
+    """Aplica los derivados sobre los JSON en memoria (claves: fichas, stats, similares, galaxia, gusto)."""
+    fichas = datos["fichas"]
+    stats = datos["stats"]
+    datos["similares"] = sanear_similares(datos["similares"])
     stats["rewatch"] = con_posters_rewatch(stats["rewatch"], fichas)
     stats["muro"] = muro_portada(stats, fichas)
-    stats["resumen"] = resumen(leer("galaxia"), leer("gusto"))
-    escribir("stats", stats)
+    stats["resumen"] = resumen(datos["galaxia"], datos["gusto"])
+
+
+def derivar(data_dir: Path) -> None:
+    nombres = ("fichas", "stats", "similares", "galaxia", "gusto")
+    datos = {n: json.loads((data_dir / f"{n}.json").read_text(encoding="utf-8")) for n in nombres}
+    aplicar_derivados(datos)
+    for n in ("similares", "stats"):
+        (data_dir / f"{n}.json").write_text(json.dumps(datos[n]), encoding="utf-8")
 
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        sys.exit("uso: python3 pipeline/derivar_front.py <carpeta con los JSON>")
+        sys.exit("uso: python3 -m atlas.derivar_front <carpeta con los JSON>")
     derivar(Path(sys.argv[1]))

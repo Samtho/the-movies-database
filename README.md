@@ -41,8 +41,12 @@ Para los e2e hace falta Chromium de Playwright (`npx playwright install chromium
 ## Datos
 
 La app no tiene backend. Lee 8 JSON de `public/data/` generados por el pipeline de Python
-en `pipeline/`. Los datos crudos (CSV de Kaggle, export de Trakt), los intermedios
-(`*.pkl`) y la clave de TMDB **nunca** entran en git (ver `.gitignore`).
+en `pipeline/` (cómo refrescarlos: [`pipeline/README.md`](pipeline/README.md)). Los datos
+crudos (dataset de Kaggle, export de Trakt), los intermedios (`*.pkl`) y la clave de TMDB
+**nunca** entran en git (ver `.gitignore`).
+
+El contrato de los JSON está en `src/lib/schema.ts` y se valida en CI junto con 16
+invariantes entre archivos (`tests/data/`).
 
 ## Despliegue
 

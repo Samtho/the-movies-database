@@ -29,7 +29,12 @@ export default function Vida({ onFicha }: { onFicha: (id: number) => void }) {
           se completaron con la API de TMDB.</>}>
         <div className="grid lg:grid-cols-2 gap-6 mt-10">
           <Card titulo="Tu línea temporal (visionados por mes)"><EChart option={opciones.mensual} height={260} etiqueta="Visionados por mes" /></Card>
-          <Card titulo="Cuándo ves cine (día × hora)"><EChart option={opciones.heat} height={260} etiqueta="Visionados por día de la semana y hora" /></Card>
+          <Card titulo="Cuándo ves cine (día × hora local)">
+            <EChart option={opciones.heat} height={260} etiqueta="Visionados por día de la semana y hora local" />
+            <p className="text-xs text-faint mt-2">
+              {formatoNumero(st.horas_registradas)} de {formatoNumero(st.plays)} visionados tienen hora registrada; el resto se importó solo con fecha y no aparece aquí.
+            </p>
+          </Card>
           <Card titulo="De qué época es tu cine (décadas de estreno)"><EChart option={opciones.decadas} height={300} etiqueta="Películas vistas por década de estreno" /></Card>
           <Card titulo="Tus más repetidas">
             {repetidas.length === 0 ? <p className="text-sm text-faint">Aún no has repetido ninguna película.</p> : (

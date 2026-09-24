@@ -16,9 +16,9 @@ describe("Formula", () => {
     servirDatos({
       gusto: gusto({
         benchmark: { "Regresión logística": { auc: 0.8, std: 0 }, A: { auc: 0.7, std: 0 }, B: { auc: 0.6, std: 0 } },
-        auc_amplio: [0.83, 0.02],
-        backtest: { ...gusto().backtest, azar100: 2.5, n_test: 321 },
-        segunda_etapa: { activa: false, notas: 7, umbral: 150 },
+        auc_cv: [0.83, 0.02],
+        backtest: { ...gusto().backtest, azar100: 2.5, n_test: 321, top10: 61, techo: { mediana_pct: 2, top10: 79, top20: 90, p100: 73 } },
+        segunda_etapa: { activa: false, notas: 7, notas_totales: 70, umbral: 150 },
       }),
       stats: stats({ match_dataset: 42 }),
     });
@@ -26,9 +26,11 @@ describe("Formula", () => {
     expect(await screen.findByText(/Tres modelos compitieron/)).toBeInTheDocument();
     expect(screen.getByText("Ganó el más simple.")).toBeInTheDocument();
     expect(screen.getByText(/tus 42 vistas/)).toBeInTheDocument();
-    expect(screen.getByText(/las 321 películas que viste después/)).toBeInTheDocument();
+    expect(screen.getByText(/las 321 películas que descubriste después/)).toBeInTheDocument();
+    expect(screen.getByText(/sube a 79% en el top-10% y 73 de/)).toBeInTheDocument(); // techo explicado
     expect(screen.getByText(/al azar serían ~2,5/)).toBeInTheDocument(); // antes mostraba "~3"
-    expect(screen.getByText(/Llevas 7\./)).toBeInTheDocument();
+    expect(screen.getByText(/Llevas 7 que cuentan/)).toBeInTheDocument();
+    expect(screen.getByText(/de tus 70 notas; las de películas posteriores a 2017/)).toBeInTheDocument();
     expect(screen.getByText(/acierta 8 de cada 10 veces/)).toBeInTheDocument();
   });
 
@@ -47,7 +49,7 @@ describe("Formula", () => {
   });
 
   it("con la segunda etapa activa lo indica", async () => {
-    servirDatos({ gusto: gusto({ segunda_etapa: { activa: true, notas: 200, umbral: 150 } }), stats: stats() });
+    servirDatos({ gusto: gusto({ segunda_etapa: { activa: true, notas: 200, notas_totales: 210, umbral: 150 } }), stats: stats() });
     render(<Formula />);
     expect(await screen.findByText(/Ya está activa\./)).toBeInTheDocument();
   });
@@ -72,9 +74,10 @@ describe("Marquesina", () => {
 
 describe("Vida", () => {
   it("visionados, posteriores a 2017 y puntuadas desde stats", async () => {
-    servirDatos({ stats: stats({ plays: 77, post2017: 9, ratings: [{ t: "A", r: 8, id: 1 }, { t: "B", r: 3, id: 2 }] }) });
+    servirDatos({ stats: stats({ plays: 77, horas_registradas: 30, post2017: 9, ratings: [{ t: "A", r: 8, id: 1 }, { t: "B", r: 3, id: 2 }] }) });
     render(<Vida onFicha={() => {}} />);
     expect(await screen.findByText(/tus 77 visionados/)).toBeInTheDocument();
+    expect(screen.getByText(/30 de 77 visionados tienen hora registrada/)).toBeInTheDocument();
     expect(screen.getByText(/Las 9 películas posteriores a 2017/)).toBeInTheDocument();
     expect(screen.getByText(/Tus 2 películas puntuadas/)).toBeInTheDocument();
   });

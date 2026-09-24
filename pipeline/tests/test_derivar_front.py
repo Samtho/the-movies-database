@@ -1,11 +1,9 @@
 import json
-import sys
 from pathlib import Path
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from derivar_front import (  # noqa: E402
+from atlas.derivar_front import (
     con_posters_rewatch,
     derivar,
     muro_portada,
@@ -61,7 +59,7 @@ def test_muro_vacio_sin_datos():
 
 
 def test_resumen():
-    gusto = {"auc_amplio": [0.90818, 0.01072], "benchmark": {"a": {}, "b": {}, "c": {}}}
+    gusto = {"auc_cv": [0.90818, 0.01072], "benchmark": {"a": {}, "b": {}, "c": {}}}
     assert resumen([{}, {}], gusto) == {"universo": 2, "auc": 0.908, "auc_std": 0.011, "modelos": 3}
 
 
@@ -71,7 +69,7 @@ def test_derivar_de_punta_a_punta(tmp_path: Path):
         "stats": {"rewatch": [{"id": 1, "n": 2}], "ratings": [{"id": 3}]},
         "similares": {"1": [1, 3], "3": [1]},
         "galaxia": [{}, {}, {}],
-        "gusto": {"auc_amplio": [0.9, 0.01], "benchmark": {"x": {}}},
+        "gusto": {"auc_cv": [0.9, 0.01], "benchmark": {"x": {}}},
     }
     for nombre, contenido in datos.items():
         (tmp_path / f"{nombre}.json").write_text(json.dumps(contenido))

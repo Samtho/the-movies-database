@@ -23,6 +23,7 @@ export const FichaSchema = z.object({
   o: z.string(), // sinopsis
   v: z.union([z.literal(0), z.literal(1)]), // 1 = vista
   reciente: z.literal(1).optional(), // posterior al dataset (traída de la API de TMDB)
+  te: z.string().optional(), // título en español, si difiere del original
 });
 export const FichasSchema = z.record(z.string(), FichaSchema);
 
@@ -58,7 +59,7 @@ export const CandidataSchema = z.object({
 });
 export const GustoSchema = z.object({
   benchmark: z.record(z.string(), z.object({ auc: z.number(), std: z.number() })),
-  auc_amplio: z.tuple([z.number(), z.number()]),
+  auc_cv: z.tuple([z.number(), z.number()]), // AUC media y desviación, validación cruzada 5-fold
   coefs: z.array(z.object({ f: z.string(), w: z.number() })),
   candidatos: z.array(CandidataSchema),
   leyenda: z.array(z.string()),
@@ -73,8 +74,13 @@ export const GustoSchema = z.object({
     p300: entero,
     p500: entero,
     azar100: z.number(),
+    // lo anterior es el resultado conservador (sin votos ni popularidad medidos en 2017);
+    // el techo incluye esas variables. La verdad está entre ambos.
+    techo: z.object({ mediana_pct: z.number(), top10: z.number(), top20: z.number(), p100: entero }),
+    metodo: entero,
   }),
-  segunda_etapa: z.object({ activa: z.boolean(), notas: entero, umbral: entero }),
+  // notas: las que cuentan para el umbral (películas del dataset); notas_totales: todas las de Trakt
+  segunda_etapa: z.object({ activa: z.boolean(), notas: entero, notas_totales: entero, umbral: entero }),
 });
 
 // ---------- industria.json ----------
@@ -99,7 +105,8 @@ export const StatsSchema = z.object({
   match_dataset: entero,
   post2017: entero,
   mensual: z.array(z.tuple([z.string().regex(/^\d{4}-\d{2}$/), entero])),
-  semana_hora: z.array(z.array(entero).length(24)).length(7), // lunes..domingo × 0..23 h
+  semana_hora: z.array(z.array(entero).length(24)).length(7), // lunes..domingo × 0..23 h, hora local
+  horas_registradas: entero, // visionados con hora real (el resto se importó solo con fecha)
   decadas: z.array(z.tuple([entero, entero])),
   rewatch: z.array(z.object({ t: z.string(), a: entero.nullable(), n: entero, id: entero.nullable(), p: rutaImagen })),
   top_directores: z.array(Conteo.extend({ p: rutaImagen.optional() })),

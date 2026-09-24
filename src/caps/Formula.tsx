@@ -16,7 +16,7 @@ export default function Formula() {
   const ganador = bench[0];
   const coefs = coefsLegibles(g.coefs);
   const maxW = pesoMaximo(coefs);
-  const [auc, aucStd] = g.auc_amplio;
+  const [auc, aucStd] = g.auc_cv;
   const bt = g.backtest;
   const etapa = g.segunda_etapa;
   const simpleGana = esModeloSimple(ganador?.nombre);
@@ -43,7 +43,7 @@ export default function Formula() {
               <span className={`text-sm tabular-nums w-12 text-right ${i === 0 ? "text-marquee font-bold" : "text-faint"}`}>{formatoNumero(m.auc, 3)}</span>
             </div>
           ))}
-          <p className="text-xs text-faint mt-4">Benchmark sobre el universo estricto (películas muy visibles). En el universo amplio de recomendación, el modelo en producción obtiene:</p>
+          <p className="text-xs text-faint mt-4">Torneo de julio de 2026 sobre las películas muy visibles (100 votos o más). El modelo en producción, con las variables de texto y reentrenado en cada refresco, obtiene en ese mismo universo:</p>
           <div className="mt-2 flex items-baseline gap-3">
             <CountUp to={auc} decimals={3} className="font-display text-6xl font-semibold text-marquee" />
             <span className="text-sm text-faint">AUC ± {formatoNumero(aucStd, 3)}</span>
@@ -65,28 +65,37 @@ export default function Formula() {
         </Card>
       </div>
       <div className="mt-6 grid lg:grid-cols-2 gap-6">
-        <Card className="!border-marquee/40" titulo="La prueba del algodón (backtest temporal)">
+        <Card className="!border-marquee/40" titulo="La prueba del algodón (backtest temporal, versión conservadora)">
           <p className="text-sm text-ivory-dim leading-relaxed">
             Entrenamos el modelo solo con lo que habías visto <strong className="text-ivory">antes de {bt.corte.slice(0, 4)}</strong> y
-            comprobamos contra las {formatoNumero(bt.n_test)} películas que viste después:
+            comprobamos contra las {formatoNumero(bt.n_test)} películas que descubriste después:
           </p>
           <div className="mt-4 flex flex-wrap gap-x-10 gap-y-4">
             <div><CountUp to={bt.p100} className="font-display text-6xl font-semibold text-marquee" /><div className="text-xs text-faint mt-1">de su top-100 acabaste viéndolas<br />(al azar serían ~{formatoNumero(bt.azar100, 1)})</div></div>
-            <div><CountUp to={bt.top10} suffix="%" className="font-display text-6xl font-semibold" /><div className="text-xs text-faint mt-1">de tus vistas futuras estaban<br />en su top-10%</div></div>
-            <div><span className="font-display text-6xl font-semibold">top {formatoNumero(bt.mediana_pct, 1)}%</span><div className="text-xs text-faint mt-1">percentil mediano de tus<br />vistas futuras en el ranking</div></div>
+            <div><CountUp to={bt.top10} suffix="%" className="font-display text-6xl font-semibold" /><div className="text-xs text-faint mt-1">de tus descubrimientos estaban<br />en su top-10%</div></div>
+            <div><span className="font-display text-6xl font-semibold">top {formatoNumero(bt.mediana_pct, 1)}%</span><div className="text-xs text-faint mt-1">percentil mediano de tus<br />descubrimientos en el ranking</div></div>
           </div>
+          <p className="text-xs text-faint mt-5 leading-relaxed">
+            Conservadora porque no usa votos ni popularidad: el dataset los midió en 2017, después del corte, y usarlos sería
+            mirar el futuro. Con ellos el resultado sube a {formatoNumero(bt.techo.top10)}% en el top-10% y {formatoNumero(bt.techo.p100)} de
+            100: ese es el techo. La cifra real está entre ambas.
+          </p>
         </Card>
         <Card titulo="Cómo se refuerza a partir de ahora">
           <ul className="text-sm text-ivory-dim leading-relaxed space-y-2.5">
             <li><strong className="text-ivory">1 · Puntúa lo que veas en Trakt</strong> (del 1 al 10, dos segundos). Las notas bajas valen oro: hoy el modelo no sabe qué viste y no te gustó.</li>
             <li><strong className="text-ivory">2 · Re-exporta cuando quieras.</strong> El actualizador re-cruza, pide a TMDB solo lo nuevo y reentrena con tus vistas recientes.</li>
             <li><strong className="text-ivory">3 · A las {formatoNumero(etapa.umbral)} notas</strong> se activa sola la segunda etapa: P(gustarte | verla), y el score pasa a mezclar elección y disfrute.
-              <span className="text-marquee"> {etapa.activa ? "Ya está activa." : `Llevas ${formatoNumero(etapa.notas)}.`}</span></li>
+              <span className="text-marquee"> {etapa.activa ? "Ya está activa." : `Llevas ${formatoNumero(etapa.notas)} que cuentan`}</span>
+              {!etapa.activa && etapa.notas_totales > etapa.notas && (
+                <span className="text-faint"> (de tus {formatoNumero(etapa.notas_totales)} notas; las de películas posteriores a 2017 aún no sirven al modelo)</span>
+              )}
+              {!etapa.activa && <span className="text-marquee">.</span>}</li>
           </ul>
         </Card>
       </div>
       <Item className="mt-7 text-sm text-faint max-w-3xl leading-relaxed">
-        Honestidad metodológica: la señal es implícita (haber visto no es haber disfrutado; tus {formatoNumero(etapa.notas)} notas
+        Honestidad metodológica: la señal es implícita (haber visto no es haber disfrutado; tus {formatoNumero(etapa.notas_totales)} notas
         explícitas son pocas para entrenar solas), el dataset llega a 2017 y la popularidad es parte del modelo (ves lo que es visible).
         Aun así, un AUC de {formatoNumero(auc, 1)} significa que, ante dos películas al azar, el modelo acierta
         {" "}{Math.round(auc * 10)} de cada 10 veces cuál verías tú.
