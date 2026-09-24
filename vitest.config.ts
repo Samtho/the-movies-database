@@ -15,6 +15,10 @@ export default mergeConfig(
         include: ["src/**/*.{ts,tsx}"],
         exclude: ["src/**/*.test.{ts,tsx}", "src/test/**", "src/main.tsx", "src/vite-env.d.ts"],
         reporter: ["text-summary", "html"],
+        // la lógica pura vive en src/lib: ahí se exige cobertura alta (9A)
+        thresholds: {
+          "src/lib/**": { branches: 90, functions: 95, lines: 95, statements: 95 },
+        },
       },
     },
   }),

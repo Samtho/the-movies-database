@@ -37,3 +37,5 @@ body {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
+/* kicker pequeño para títulos de tarjeta */
+.kicker-sm { font-size: 10px; }

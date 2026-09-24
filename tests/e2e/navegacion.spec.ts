@@ -17,7 +17,10 @@ for (const v of VISTAS) {
     await aislarRed(page);
     const errores = vigilarErrores(page);
     await page.goto(`./${v.hash}`);
-    await expect(page.getByRole("heading", { name: v.titulo })).toBeVisible({ timeout: 15_000 });
+    const titulo = page.getByRole("heading", { name: v.titulo });
+    await expect(titulo).toBeVisible({ timeout: 15_000 });
+    // visible de verdad: la animación de entrada termina con opacidad 1
+    await expect(titulo).toHaveCSS("opacity", "1");
     await page.waitForLoadState("networkidle");
     expect(errores).toEqual([]);
   });

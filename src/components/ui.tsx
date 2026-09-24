@@ -1,21 +1,24 @@
 import { useEffect, type ReactNode } from "react";
 import { motion, useMotionValue, useTransform, animate, useReducedMotion } from "motion/react";
-import { rise, stagger } from "./motion";
+import { formatoNumero } from "../lib/format";
+import { aparece, rise } from "../lib/motion";
 
+// Sección de capítulo: kicker, titular, entradilla y contenido, con entrada escalonada.
+// Cada pieza anima por su cuenta: el titular puede montarse más tarde (cuando llegan
+// los datos) y aun así aparecer.
 export function Bloque({ kicker, titulo, children, intro }: {
   kicker?: string; titulo?: ReactNode; children?: ReactNode; intro?: ReactNode;
 }) {
   return (
-    <motion.section variants={stagger} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.15 }}
-      className="max-w-[1500px] mx-auto px-6 md:px-12 py-14">
-      {kicker && <motion.p variants={rise} className="kicker mb-3">{kicker}</motion.p>}
+    <section className="max-w-[1500px] mx-auto px-6 md:px-12 py-14">
+      {kicker && <motion.p variants={aparece} custom={0} initial="hidden" animate="show" className="kicker mb-3">{kicker}</motion.p>}
       {titulo && (
-        <motion.h2 variants={rise} className="font-display font-semibold leading-[1.05]"
+        <motion.h2 variants={aparece} custom={1} initial="hidden" animate="show" className="font-display font-semibold leading-[1.05]"
           style={{ fontSize: "clamp(2rem, 4.2vw, 3.6rem)" }}>{titulo}</motion.h2>
       )}
-      {intro && <motion.p variants={rise} className="mt-4 text-lg text-ivory-dim max-w-3xl leading-relaxed">{intro}</motion.p>}
+      {intro && <motion.p variants={aparece} custom={2} initial="hidden" animate="show" className="mt-4 text-lg text-ivory-dim max-w-3xl leading-relaxed">{intro}</motion.p>}
       {children}
-    </motion.section>
+    </section>
   );
 }
 
@@ -26,10 +29,11 @@ export function Item({ children, className }: { children: ReactNode; className?:
   );
 }
 
-export function Card({ children, className }: { children: ReactNode; className?: string }) {
+export function Card({ children, className, titulo }: { children: ReactNode; className?: string; titulo?: ReactNode }) {
   return (
     <motion.div variants={rise} initial="hidden" animate="show"
       className={`rounded-2xl border border-hairline bg-stage-soft p-6 ${className ?? ""}`}>
+      {titulo && <p className="kicker kicker-sm mb-3">{titulo}</p>}
       {children}
     </motion.div>
   );
@@ -40,13 +44,11 @@ export function CountUp({ to, decimals = 0, suffix = "", className, delay = 0.3,
 }) {
   const reduced = useReducedMotion();
   const mv = useMotionValue(reduced ? to : 0);
-  const text = useTransform(mv, (v: number) =>
-    v.toLocaleString("es-ES", { minimumFractionDigits: decimals, maximumFractionDigits: decimals }) + suffix);
+  const text = useTransform(mv, (v: number) => formatoNumero(v, decimals) + suffix);
   useEffect(() => {
     if (reduced) { mv.set(to); return; }
     const c = animate(mv, to, { duration, delay, ease: "circOut" });
     return () => c.stop();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [to, reduced]);
+  }, [to, reduced, mv, delay, duration]);
   return <motion.span className={className}>{text}</motion.span>;
 }

@@ -13,7 +13,9 @@
     "test:watch": "vitest",
     "test:cov": "vitest run --coverage",
     "test:e2e": "playwright test",
-    "check": "npm run lint && npm run typecheck && npm run test && npm run build && npm run test:e2e"
+    "check": "npm run lint && npm run typecheck && npm run test:cov && npm run build && npm run budget && npm run test:e2e",
+    "budget": "node scripts/presupuesto.mjs",
+    "test:py": "python3 -m pytest pipeline/tests -q"
   },
   "dependencies": {
     "@deck.gl/core": "^9.3.3",
