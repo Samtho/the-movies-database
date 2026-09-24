@@ -1,11 +1,6 @@
 import { useEffect, type ReactNode } from "react";
-import { motion, useMotionValue, useTransform, animate, useReducedMotion, type Variants } from "motion/react";
-
-export const stagger: Variants = { hidden: {}, show: { transition: { staggerChildren: 0.08, delayChildren: 0.1 } } };
-export const rise: Variants = {
-  hidden: { opacity: 0, y: 26, filter: "blur(5px)" },
-  show: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.65, ease: [0.22, 0.7, 0.2, 1] } },
-};
+import { motion, useMotionValue, useTransform, animate, useReducedMotion } from "motion/react";
+import { rise, stagger } from "./motion";
 
 export function Bloque({ kicker, titulo, children, intro }: {
   kicker?: string; titulo?: ReactNode; children?: ReactNode; intro?: ReactNode;

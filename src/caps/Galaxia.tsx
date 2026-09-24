@@ -15,7 +15,7 @@ export default function Galaxia({ onFicha }: { onFicha: (id: number) => void }) 
   const [datos, setDatos] = useState<GalaxiaPunto[] | null>(null);
   const [soloMias, setSoloMias] = useState(false);
   const [genero, setGenero] = useState<string | null>(null);
-  const [hover, setHover] = useState<{ p: GalaxiaPunto; x: number; y: number } | null>(null);
+  const [hover, setHover] = useState<{ p: GalaxiaPunto; left: number; top: number } | null>(null);
 
   useEffect(() => { carga<GalaxiaPunto[]>("galaxia").then(setDatos); }, []);
 
@@ -32,8 +32,11 @@ export default function Galaxia({ onFicha }: { onFicha: (id: number) => void }) 
       controller: true,
       style: { position: "absolute", inset: "0" },
       onHover: (info) => {
-        if (info.object) setHover({ p: info.object as GalaxiaPunto, x: info.x ?? 0, y: info.y ?? 0 });
-        else setHover(null);
+        if (!info.object) { setHover(null); return; }
+        // posición del tooltip calculada en el evento (no en el render), acotada al contenedor
+        const w = el.current?.clientWidth ?? 600, h = el.current?.clientHeight ?? 400;
+        const x = info.x ?? 0, y = info.y ?? 0;
+        setHover({ p: info.object as GalaxiaPunto, left: Math.max(8, Math.min(x + 14, w - 290)), top: Math.max(8, Math.min(y + 14, h - 90)) });
       },
       onClick: (info) => { const o = info.object as GalaxiaPunto | undefined; if (o) onFicha(o.id); },
       layers: [],
@@ -84,7 +87,7 @@ export default function Galaxia({ onFicha }: { onFicha: (id: number) => void }) 
         <div ref={el} className="relative w-full" style={{ height: "72vh", background: "radial-gradient(90% 90% at 50% 40%, #101017 0%, #0a0a0d 100%)" }} />
         {hover && (
           <div className="absolute z-10 pointer-events-none rounded-xl border border-hairline bg-stage-soft/95 backdrop-blur px-3 py-2.5 flex gap-3 items-center max-w-xs"
-            style={{ left: Math.min(hover.x + 14, (el.current?.clientWidth ?? 600) - 280), top: hover.y + 14 }}>
+            style={{ left: hover.left, top: hover.top }}>
             {poster(hover.p.p, 92) && <img src={poster(hover.p.p, 92)!} alt="" className="w-12 rounded-md" onError={(e) => { e.currentTarget.style.display = "none"; }} />}
             <div>
               <div className="text-sm font-semibold leading-tight">{hover.p.t}</div>

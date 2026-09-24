@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { carga, poster, type Ficha, type Stats } from "../lib/data";
-import { CountUp, rise, stagger } from "../lib/ui";
+import { CountUp } from "../lib/ui";
+import { rise, stagger } from "../lib/motion";
 
 // Portada: marquesina de cine con muro de pósters reales del historial.
 export default function Marquesina({ onFicha, irA }: { onFicha: (id: number) => void; irA: (cap: string) => void }) {

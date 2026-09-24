@@ -1,2 +1,31 @@
-node_modules
-dist
+# Dependencias y builds
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Tests e2e
+playwright-report/
+test-results/
+blob-report/
+
+# Secretos (clave de TMDB y similares): nunca al repo
+.env
+.env.*
+!.env.example
+**/tmdb_key.txt
+
+# Pipeline: datos crudos, exports personales e intermedios pesados
+pipeline/raw/
+pipeline/cache/
+pipeline/.venv/
+pipeline/**/__pycache__/
+*.pkl
+*.zip
+
+# Sistema y editores
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.log

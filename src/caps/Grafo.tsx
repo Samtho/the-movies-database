@@ -46,18 +46,20 @@ export default function Grafo({ onFicha }: { onFicha: (id: number) => void }) {
   };
 
   // ---------- estado del modo explorar ----------
-  const [focus, setFocus] = useState<number | null>(null);
+  const [focusElegido, setFocus] = useState<number | null>(null);
   const [trail, setTrail] = useState<number[]>([]);
   const [hover, setHover] = useState<number | null>(null);
   const anim = useRef<{ t0: number; from: Map<number, [number, number, number]>; to: Map<number, [number, number, number]> }>({ t0: 0, from: new Map(), to: new Map() });
 
-  // foco inicial: tu persona más vista
-  useEffect(() => {
-    if (!g || focus != null) return;
+  // foco inicial: tu persona más vista (derivado de los datos, sin efecto).
+  // Con un grafo vacío no hay foco.
+  const focoInicial = useMemo(() => {
+    if (!g || g.nodes.length === 0) return null;
     let best = -1, bv = -1;
     g.nodes.forEach((n, i) => { if (n.t !== "m" && n.v > bv) { bv = n.v; best = i; } });
-    setFocus(best >= 0 ? best : 0);
-  }, [g, focus]);
+    return best >= 0 ? best : 0;
+  }, [g]);
+  const focus = focusElegido ?? focoInicial;
 
   // vecinos del foco, ordenados y limitados
   const rueda = useMemo(() => {

@@ -10,6 +10,25 @@ const fFecha = (iso: string) => {
   return `${d}/${m}/${y}`;
 };
 
+// Botón de persona (dirección o reparto): foto o inicial, y abre su ficha.
+// Vive fuera de FichaModal para no recrearse en cada render.
+function PersonaBoton({ nombre, foto, rol, onPersona }: {
+  nombre: string; foto: string | null | undefined; rol: string; onPersona: (nombre: string) => void;
+}) {
+  const src = poster(foto ?? null, 92);
+  return (
+    <button onClick={() => onPersona(nombre)} className="flex items-center gap-2.5 group text-left">
+      {src
+        ? <img src={src} alt={nombre} className="h-12 w-12 rounded-full object-cover border border-hairline group-hover:border-marquee transition-colors" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+        : <span className="h-12 w-12 rounded-full bg-stage grid place-items-center text-faint text-sm border border-hairline group-hover:border-marquee">{nombre[0]}</span>}
+      <div>
+        <div className="text-sm font-semibold leading-tight group-hover:text-marquee transition-colors">{nombre}</div>
+        <div className="text-[10px] text-faint uppercase tracking-wide">{rol}</div>
+      </div>
+    </button>
+  );
+}
+
 // Ficha universal (espíritu Obsidian): todo lo clicable abre esto; las personas
 // también son clicables y llevan a su propia ficha con TU historial.
 export default function FichaModal({ id, onClose, onOpen, onPersona }: {
@@ -36,18 +55,6 @@ export default function FichaModal({ id, onClose, onOpen, onPersona }: {
   const f = id != null && fichas ? fichas[String(id)] : null;
   const vista = id != null && vistas ? vistas[String(id)] : null;
   const g = id != null ? gusto?.get(id) : null;
-
-  const Persona = ({ nombre, foto, rol }: { nombre: string; foto: string | null | undefined; rol: string }) => (
-    <button onClick={() => onPersona(nombre)} className="flex items-center gap-2.5 group text-left">
-      {poster(foto ?? null, 92)
-        ? <img src={poster(foto ?? null, 92)!} alt={nombre} className="h-12 w-12 rounded-full object-cover border border-hairline group-hover:border-marquee transition-colors" onError={(e) => { e.currentTarget.style.display = "none"; }} />
-        : <span className="h-12 w-12 rounded-full bg-stage grid place-items-center text-faint text-sm border border-hairline group-hover:border-marquee">{nombre[0]}</span>}
-      <div>
-        <div className="text-sm font-semibold leading-tight group-hover:text-marquee transition-colors">{nombre}</div>
-        <div className="text-[10px] text-faint uppercase tracking-wide">{rol}</div>
-      </div>
-    </button>
-  );
 
   return (
     <AnimatePresence>
@@ -94,8 +101,8 @@ export default function FichaModal({ id, onClose, onOpen, onPersona }: {
                   </div>
                   {f.o && <p className="text-[15px] text-ivory-dim mt-4 leading-relaxed">{f.o}</p>}
                   <div className="mt-6 flex flex-wrap gap-x-7 gap-y-4">
-                    {f.d && <Persona nombre={f.d} foto={f.dp} rol="Dirección" />}
-                    {f.c.map((a, i) => <Persona key={a} nombre={a} foto={f.cp?.[i]} rol="Reparto" />)}
+                    {f.d && <PersonaBoton nombre={f.d} foto={f.dp} rol="Dirección" onPersona={onPersona} />}
+                    {f.c.map((a, i) => <PersonaBoton key={a} nombre={a} foto={f.cp?.[i]} rol="Reparto" onPersona={onPersona} />)}
                   </div>
                   {sims?.[String(id)] && fichas && (
                     <div className="mt-7">

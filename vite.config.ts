@@ -2,7 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
-// base relativa para que funcione en GitHub Pages bajo /panoplia-defensa/ sin tocar nada
+// base relativa: la app se sirve bajo /the-movies-database/ en GitHub Pages
 export default defineConfig({
   base: "./",
   plugins: [react(), tailwindcss()],
