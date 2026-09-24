@@ -52,9 +52,10 @@ def test_mapa_excluye_relleno_y_cuenta_las_horas_reales():
 
 
 def test_stats_desempates_deterministas_y_fotos(tmp_path, md):
-    vistas = {1000 + i: ["2012-01-01T20:00:00.000Z"] for i in range(10)}
-    vistas[1003] = ["2012-01-01T20:00:00.000Z", "2020-01-01T20:00:00.000Z"]
-    vistas[1004] = ["2012-01-01T20:00:00.000Z", "2024-01-01T20:00:00.000Z"]
+    # un día distinto por película: 10 en el mismo instante serían una carga en bloque
+    vistas = {1000 + i: [f"2012-01-{i + 1:02d}T20:00:00.000Z"] for i in range(10)}
+    vistas[1003] = ["2012-01-04T20:00:00.000Z", "2020-01-01T20:00:00.000Z"]
+    vistas[1004] = ["2012-01-05T20:00:00.000Z", "2024-01-01T20:00:00.000Z"]
     ex = cargar_export(guardar_export(export_trakt(vistas), tmp_path))
     fila = md[md.tmdb == 1000].iloc[0]
     fichas = {"1000": {"d": fila.director, "dp": "/foto.jpg", "c": [], "cp": []}}
@@ -67,5 +68,24 @@ def test_stats_desempates_deterministas_y_fotos(tmp_path, md):
     empatados = [d["n"] for d in st["top_directores"] if d["c"] == conteos[-1]]
     assert empatados == sorted(empatados)
     assert any(d["p"] == "/foto.jpg" for d in st["top_directores"])
-    assert sum(n for _, n in st["mensual"]) == ex.plays
+    assert sum(n for _, n in st["mensual"]) == st["fechados"] == ex.plays
     assert st["horas_registradas"] == sum(map(sum, st["semana_hora"]))
+
+
+def test_stats_solo_con_fechas_fiables(tmp_path, md):
+    vistas = {1000 + i: [f"2015-02-18T03:{40 + i}:00.000Z"] for i in range(10)}  # carga en bloque
+    vistas[1020] = ["1970-01-01T00:00:00.000Z"]  # fecha desconocida
+    vistas[1021] = ["2020-03-01T20:00:00.000Z"]
+    ex = cargar_export(guardar_export(export_trakt(vistas), tmp_path))
+    st = calcular_stats(ex, md, {}, {})
+    assert st["mensual"] == [["2020-03", 1]]  # ni 1970-01 ni la barra falsa de 2015-02
+    assert st["fechados"] == 1 and st["horas_registradas"] == 1
+    assert st["total_vistas"] == 12  # todas cuentan como vistas
+
+
+def test_repetidas_sin_fecha_van_al_final_del_empate(tmp_path, md):
+    desconocida = "1970-01-01T00:00:00.000Z"
+    vistas = {1001: [desconocida, desconocida], 1002: ["2012-01-01T20:00:00.000Z", "2013-01-01T20:00:00.000Z"]}
+    ex = cargar_export(guardar_export(export_trakt(vistas), tmp_path))
+    st = calcular_stats(ex, md, {}, {})
+    assert [r["id"] for r in st["rewatch"]] == [1002, 1001]

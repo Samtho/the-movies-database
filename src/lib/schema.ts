@@ -74,6 +74,7 @@ export const GustoSchema = z.object({
     p300: entero,
     p500: entero,
     azar100: z.number(),
+    n_sin_fecha: entero, // vistas sin fecha fiable: no se sabe si fueron antes o después del corte, quedan fuera
     // lo anterior es el resultado conservador (sin votos ni popularidad medidos en 2017);
     // el techo incluye esas variables. La verdad está entre ambos.
     techo: z.object({ mediana_pct: z.number(), top10: z.number(), top20: z.number(), p100: entero }),
@@ -94,7 +95,8 @@ export const IndustriaSchema = z.object({
 export const SimilaresSchema = z.record(z.string(), z.array(entero));
 
 // ---------- vistas.json: { tmdbId: { d: última vez, n: veces } } ----------
-export const VistasSchema = z.record(z.string(), z.object({ d: fechaIso, n: entero.min(1) }));
+// d es null si la viste sin fecha fiable ("fecha desconocida" en Trakt o carga en bloque).
+export const VistasSchema = z.record(z.string(), z.object({ d: fechaIso.nullable(), n: entero.min(1) }));
 
 // ---------- stats.json ----------
 const Conteo = z.object({ n: z.string(), c: entero });
@@ -104,9 +106,11 @@ export const StatsSchema = z.object({
   minutos: entero,
   match_dataset: entero,
   post2017: entero,
-  mensual: z.array(z.tuple([z.string().regex(/^\d{4}-\d{2}$/), entero])),
+  // visionados con fecha fiable: sin "fecha desconocida" de Trakt ni cargas en bloque del historial
+  fechados: entero,
+  mensual: z.array(z.tuple([z.string().regex(/^\d{4}-\d{2}$/), entero])), // solo los fechados
   semana_hora: z.array(z.array(entero).length(24)).length(7), // lunes..domingo × 0..23 h, hora local
-  horas_registradas: entero, // visionados con hora real (el resto se importó solo con fecha)
+  horas_registradas: entero, // de los fechados, los que tienen hora real (no de relleno)
   decadas: z.array(z.tuple([entero, entero])),
   rewatch: z.array(z.object({ t: z.string(), a: entero.nullable(), n: entero, id: entero.nullable(), p: rutaImagen })),
   top_directores: z.array(Conteo.extend({ p: rutaImagen.optional() })),

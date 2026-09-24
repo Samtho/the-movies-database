@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { EstadoCarga } from "./components/EstadoCarga";
 import { Modal } from "./components/Modal";
 import { Avatar, Poster } from "./components/Poster";
-import { formatoFecha, formatoNumero } from "./lib/format";
+import { fechaDeVista, formatoFecha, formatoNumero } from "./lib/format";
 import { filmografia, ultimaVista } from "./lib/personas";
 import { useDatos } from "./lib/useDatos";
 
@@ -51,7 +51,7 @@ export default function PersonaModal({ nombre, onClose, onPeli }: {
                 </div>
                 <div className="mt-1.5 text-xs font-medium leading-tight truncate">{p.f.t}</div>
                 <div className="text-[11px] text-faint">
-                  {p.f.a}{v ? <span className="text-leaf"> · vista {formatoFecha(v.d)}</span> : ""}
+                  {p.f.a}{v ? <span className="text-leaf"> · vista {fechaDeVista(v.d)}</span> : ""}
                 </div>
               </button>
             );

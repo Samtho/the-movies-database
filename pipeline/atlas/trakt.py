@@ -2,6 +2,13 @@
 
 Del export salen: qué películas viste, cuándo por primera y por última vez, cuántas
 veces, tus notas y el historial de visionados con su hora.
+
+Fechas no fiables (issues 20 y 21). Un visionado cuenta como visto siempre, pero su
+fecha solo se usa si es fiable. No lo es:
+- la "fecha desconocida" de Trakt ("no recuerdo cuándo la vi"), que llega como el
+  instante cero de Unix (1970-01-01T00:00:00Z), ni una fecha que falta o no se entiende;
+- un visionado de una carga en bloque (ver config.CARGA_EN_BLOQUE_MIN): su fecha es
+  la del día en que se registró, no la del día en que se vio.
 """
 
 from __future__ import annotations
@@ -9,10 +16,17 @@ from __future__ import annotations
 import json
 import re
 import zipfile
-from collections import Counter
+from collections import Counter, defaultdict
+from collections.abc import Iterable
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
+
+from . import config
+
+# Así llega en el export un visionado marcado con "fecha desconocida"
+FECHA_DESCONOCIDA = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
 
 class ErrorExport(Exception):
@@ -24,15 +38,19 @@ class Visionado:
     tmdb: int
     titulo: str
     anio: int | None
-    primera: str  # AAAA-MM-DD, primera vez que la viste
-    ultima: str  # AAAA-MM-DD, última vez
+    # AAAA-MM-DD de la primera vez. None si alguno de sus visionados no tiene fecha
+    # fiable: la primera vez pudo ser antes de cualquier fecha conocida.
+    primera: str | None
+    ultima: str | None  # AAAA-MM-DD de la última vez con fecha fiable; None si no hay ninguna
     veces: int
 
 
 @dataclass(frozen=True)
 class ExportTrakt:
     vistas: dict[int, Visionado]
-    historial: list[str]  # marcas de tiempo ISO (UTC) de cada visionado de película
+    historial_fiable: list[str]  # marcas ISO (UTC) de los visionados de películas con fecha fiable
+    sin_fecha: int  # visionados con fecha desconocida, ausente o ilegible
+    en_bloque: int  # visionados registrados en una carga en bloque
     notas: dict[int, int]  # tmdb -> nota 1..10
     ratings: list[dict[str, Any]]  # para stats: {t, r, id}
     minutos: int
@@ -68,6 +86,35 @@ def _paginas(archivos: dict[str, Any], prefijo: str) -> list[Any]:
     return salida
 
 
+def instante(marca: str | None) -> datetime | None:
+    """Marca ISO de Trakt -> instante UTC. None si falta, no se entiende o es la fecha desconocida."""
+    if not marca:
+        return None
+    try:
+        t = datetime.fromisoformat(marca.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    t = t if t.tzinfo else t.replace(tzinfo=timezone.utc)
+    return None if t == FECHA_DESCONOCIDA else t.astimezone(timezone.utc)
+
+
+def instantes_en_bloque(instantes: Iterable[datetime], minimo: int = config.CARGA_EN_BLOQUE_MIN,
+                        horas: float = config.CARGA_EN_BLOQUE_HORAS) -> set[datetime]:
+    """Instantes que forman parte de una carga en bloque: `minimo` o más visionados dentro
+    de una ventana de `horas` (ambos extremos incluidos). Ventana deslizante, no día
+    natural: una carga que cruza la medianoche también se detecta."""
+    orden = sorted(instantes)
+    ventana = timedelta(hours=horas)
+    en_bloque: set[datetime] = set()
+    inicio = 0
+    for fin, t in enumerate(orden):
+        while t - orden[inicio] > ventana:
+            inicio += 1
+        if fin - inicio + 1 >= minimo:
+            en_bloque.update(orden[inicio:fin + 1])
+    return en_bloque
+
+
 def cargar_export(ruta: str | Path) -> ExportTrakt:
     archivos = _leer_archivos(Path(ruta))
     vistas_crudas = _paginas(archivos, "watched-movies")
@@ -78,47 +125,60 @@ def cargar_export(ruta: str | Path) -> ExportTrakt:
 
     descartadas: Counter[str] = Counter()
 
-    # historial de películas: primera fecha por película y horas de cada visionado
-    primeras: dict[int, str] = {}
-    historial: list[str] = []
+    # historial de películas: cada visionado con su instante (None si no tiene fecha fiable)
+    visionados: list[tuple[int | None, str, datetime | None]] = []
     for h in _paginas(archivos, "watched-history"):
         if h.get("type") != "movie":
             continue
         tmdb = (h.get("movie") or {}).get("ids", {}).get("tmdb")
-        cuando = h.get("watched_at")
-        if not cuando:
-            descartadas["historial sin fecha"] += 1
-            continue
-        historial.append(cuando)
+        visionados.append((tmdb, h.get("watched_at") or "", instante(h.get("watched_at"))))
+    en_bloque = instantes_en_bloque(t for _, _, t in visionados if t is not None)
+
+    def fiable(t: datetime | None) -> datetime | None:
+        return t if t is not None and t not in en_bloque else None
+
+    historial_fiable: list[str] = []
+    fechas: defaultdict[int, set[str]] = defaultdict(set)  # tmdb -> días con fecha fiable
+    dudosas: set[int] = set()  # películas con algún visionado sin fecha fiable
+    for tmdb, marca, t in visionados:
+        t_fiable = fiable(t)
+        if t_fiable is not None:
+            historial_fiable.append(marca)  # un visionado sin id también cuenta para los horarios
         if tmdb is None:
             descartadas["historial sin id de TMDB"] += 1
-            continue
-        dia = cuando[:10]
-        if tmdb not in primeras or dia < primeras[tmdb]:
-            primeras[tmdb] = dia
+        elif t_fiable is not None:
+            fechas[tmdb].add(t_fiable.date().isoformat())
+        else:
+            dudosas.add(tmdb)
 
-    vistas: dict[int, Visionado] = {}
+    # watched-movies: qué películas viste y cuántas veces. Su última fecha también cuenta
+    # (hay importaciones antiguas sin historial), con el mismo criterio de fiabilidad.
+    datos: dict[int, dict[str, Any]] = {}
     for m in vistas_crudas:
         peli = m.get("movie") or {}
         tmdb = peli.get("ids", {}).get("tmdb")
-        ultima = (m.get("last_watched_at") or "")[:10]
         if tmdb is None:
             descartadas["vista sin id de TMDB"] += 1
             continue
-        if not ultima:
-            descartadas["vista sin fecha"] += 1
-            continue
-        previa = vistas.get(tmdb)
-        veces = int(m.get("plays") or 1) + (previa.veces if previa else 0)
-        # si el historial no la tiene (pasa con importaciones antiguas), la primera es la última conocida
-        primera = min(primeras.get(tmdb, ultima), previa.primera if previa else ultima)
+        d = datos.setdefault(tmdb, {"veces": 0})
+        d["titulo"], d["anio"] = peli.get("title") or "", peli.get("year")
+        d["veces"] += int(m.get("plays") or 1)
+        t_fiable = fiable(instante(m.get("last_watched_at")))
+        if t_fiable is None:
+            dudosas.add(tmdb)
+        else:
+            fechas[tmdb].add(t_fiable.date().isoformat())
+
+    vistas: dict[int, Visionado] = {}
+    for tmdb, d in datos.items():
+        dias = fechas.get(tmdb, set())
         vistas[tmdb] = Visionado(
             tmdb=tmdb,
-            titulo=peli.get("title") or "",
-            anio=peli.get("year"),
-            primera=primera,
-            ultima=max(ultima, previa.ultima) if previa else ultima,
-            veces=veces,
+            titulo=d["titulo"],
+            anio=d["anio"],
+            primera=min(dias) if dias and tmdb not in dudosas else None,
+            ultima=max(dias) if dias else None,
+            veces=d["veces"],
         )
 
     ratings_crudos = archivos.get("ratings-movies.json", [])
@@ -134,7 +194,9 @@ def cargar_export(ruta: str | Path) -> ExportTrakt:
     peliculas = archivos["user-stats.json"].get("movies", {})
     return ExportTrakt(
         vistas=vistas,
-        historial=historial,
+        historial_fiable=historial_fiable,
+        sin_fecha=sum(1 for _, _, t in visionados if t is None),
+        en_bloque=sum(1 for _, _, t in visionados if t is not None and t in en_bloque),
         notas=notas,
         ratings=ratings,
         minutos=int(peliculas.get("minutes") or 0),

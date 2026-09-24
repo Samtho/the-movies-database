@@ -79,6 +79,8 @@ export default function Formula() {
             Conservadora porque no usa votos ni popularidad: el dataset los midió en 2017, después del corte, y usarlos sería
             mirar el futuro. Con ellos el resultado sube a {formatoNumero(bt.techo.top10)}% en el top-10% y {formatoNumero(bt.techo.p100)} de
             100: ese es el techo. La cifra real está entre ambas.
+            {bt.n_sin_fecha > 0 && <> Quedan fuera {formatoNumero(bt.n_sin_fecha)} películas que registraste sin fecha real,
+              porque no se sabe si las viste antes o después de {bt.corte.slice(0, 4)}.</>}
           </p>
         </Card>
         <Card titulo="Cómo se refuerza a partir de ahora">

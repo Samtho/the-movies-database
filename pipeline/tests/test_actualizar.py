@@ -12,6 +12,7 @@ from atlas.sincronizar import ErrorSincronizacion
 from conftest import dataset_sintetico, export_trakt, guardar_export
 
 POST2017 = 999_001  # vista que no está en el dataset: su ficha sale de la caché de TMDB
+SIN_FECHA = 1150  # del dataset, vista con fecha desconocida
 
 
 def montar(tmp_path: Path, previo_gusto: dict | None = None, con_cache: bool = True):
@@ -30,6 +31,7 @@ def montar(tmp_path: Path, previo_gusto: dict | None = None, con_cache: bool = T
     repetida = visibles[0]
     vistas[repetida] = ["2011-02-01T20:00:00.000Z", "2019-05-01T22:00:00.000Z"]  # vista antes y repetida después del corte
     vistas[POST2017] = ["2026-08-20T20:00:00.000Z"]
+    vistas[SIN_FECHA] = ["1970-01-01T00:00:00.000Z"]  # "no recuerdo cuándo la vi" (issue 20)
     trakt = guardar_export(export_trakt(vistas, notas={visibles[1]: 9, POST2017: 7}, titulo=lambda t: f"Título {t}"), tmp_path)
 
     fichas = {str(t): {"t": f"Película {t}", "a": 2000, "g": ["Drama"], "d": "Director 1", "dp": None, "c": ["Actor 1"], "cp": [None],
@@ -60,7 +62,8 @@ def test_de_punta_a_punta(tmp_path):
     scores = [c["s"] for c in gusto["candidatos"]]
     assert scores == sorted(scores, reverse=True)
     assert 0 <= gusto["auc_cv"][0] <= 1
-    assert gusto["backtest"]["metodo"] == 2 and "techo" in gusto["backtest"]
+    assert gusto["backtest"]["metodo"] == 3 and "techo" in gusto["backtest"]
+    assert gusto["backtest"]["n_sin_fecha"] == 1
     assert gusto["segunda_etapa"] == {"activa": False, "notas": 1, "notas_totales": 2, "umbral": 150}
 
     # la post-2017 tiene ficha nueva y marcada como vista; el resto refleja el historial
@@ -71,7 +74,11 @@ def test_de_punta_a_punta(tmp_path):
     # la repetida guarda la última fecha para la web y cuenta sus dos visionados
     assert vistas[str(repetida)] == {"d": "2019-05-01", "n": 2}
     assert stats["total_vistas"] == len(vistos) and stats["post2017"] == 1
-    assert sum(n for _, n in stats["mensual"]) == stats["plays"]
+    # la vista sin fecha cuenta como vista, pero no entra en la línea temporal ni en el mapa
+    assert vistas[str(SIN_FECHA)] == {"d": None, "n": 1} and fichas[str(SIN_FECHA)]["v"] == 1
+    assert stats["fechados"] == stats["plays"] - 1
+    assert sum(n for _, n in stats["mensual"]) == stats["fechados"]
+    assert stats["horas_registradas"] <= stats["fechados"]
     assert stats["resumen"]["auc"] == pytest.approx(gusto["auc_cv"][0], abs=1e-3)
     assert all(int(k) not in v for k, v in leer(data, "similares").items())  # sin autorreferencias
     assert leer(data, "industria") == {"serie": [], "scatter": []}  # congelada: no se toca

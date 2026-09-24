@@ -49,10 +49,10 @@ detiene y explica por qué (`--forzar` para publicar igualmente si el cambio es 
 
 | Paso | Módulo | Notas |
 |---|---|---|
-| Leer el export | `atlas/trakt.py` | Primera y última vez que viste cada película, notas, historial con hora |
+| Leer el export | `atlas/trakt.py` | Primera y última vez que viste cada película, notas, historial con hora. Fechas no fiables: la "fecha desconocida" de Trakt (1970-01-01) y las cargas en bloque (10 o más visionados en 12 horas). Esas películas cuentan como vistas, pero sin fecha |
 | Modelo de gusto | `atlas/modelo.py` | Regresión logística, AUC en validación cruzada 5-fold sobre películas con 100 votos o más |
-| Backtest | `atlas/backtest.py` | Corte en 2015 con la PRIMERA fecha de visionado. Conservador (sin votos ni popularidad, medidos en 2017) y techo (con ellos) |
-| Estadísticas | `atlas/estadisticas.py` | Horas de relleno fuera del mapa día × hora; hora local por etapas (`config.py`) |
+| Backtest | `atlas/backtest.py` | Corte en 2015 con la PRIMERA fecha de visionado. Conservador (sin votos ni popularidad, medidos en 2017) y techo (con ellos). Lo visto sin fecha fiable queda fuera |
+| Estadísticas | `atlas/estadisticas.py` | Línea temporal y mapa día × hora solo con fechas fiables; horas de relleno fuera del mapa; hora local por etapas (`config.py`) |
 | Sincronizar | `atlas/sincronizar.py` | "Visto" en fichas, galaxia y grafo; fichas nuevas desde la caché de TMDB |
 | Derivados web | `atlas/derivar_front.py` | Muro de portada, pósters de repetidas, resumen, similares sin autorreferencias |
 | Puerta | `atlas/puerta.py` | Bloquea un refresco que empeora el modelo |

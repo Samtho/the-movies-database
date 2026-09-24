@@ -32,6 +32,13 @@ describe("Formula", () => {
     expect(screen.getByText(/Llevas 7 que cuentan/)).toBeInTheDocument();
     expect(screen.getByText(/de tus 70 notas; las de películas posteriores a 2017/)).toBeInTheDocument();
     expect(screen.getByText(/acierta 8 de cada 10 veces/)).toBeInTheDocument();
+    expect(screen.queryByText(/sin fecha real/)).not.toBeInTheDocument(); // n_sin_fecha = 0: sin nota
+  });
+
+  it("las vistas sin fecha fuera del backtest se cuentan", async () => {
+    servirDatos({ gusto: gusto({ backtest: { ...gusto().backtest, n_sin_fecha: 99 } }), stats: stats() });
+    render(<Formula />);
+    expect(await screen.findByText(/Quedan fuera 99 películas que registraste sin fecha real/)).toBeInTheDocument();
   });
 
   it("si gana otro modelo, el titular lo dice", async () => {
@@ -74,12 +81,20 @@ describe("Marquesina", () => {
 
 describe("Vida", () => {
   it("visionados, posteriores a 2017 y puntuadas desde stats", async () => {
-    servirDatos({ stats: stats({ plays: 77, horas_registradas: 30, post2017: 9, ratings: [{ t: "A", r: 8, id: 1 }, { t: "B", r: 3, id: 2 }] }) });
+    servirDatos({ stats: stats({ plays: 77, fechados: 60, horas_registradas: 30, post2017: 9, ratings: [{ t: "A", r: 8, id: 1 }, { t: "B", r: 3, id: 2 }] }) });
     render(<Vida onFicha={() => {}} />);
     expect(await screen.findByText(/tus 77 visionados/)).toBeInTheDocument();
+    expect(screen.getByText(/60 de 77 visionados tienen fecha real/)).toBeInTheDocument();
     expect(screen.getByText(/30 de 77 visionados tienen hora registrada/)).toBeInTheDocument();
     expect(screen.getByText(/Las 9 películas posteriores a 2017/)).toBeInTheDocument();
     expect(screen.getByText(/Tus 2 películas puntuadas/)).toBeInTheDocument();
+  });
+
+  it("si todos los visionados tienen fecha, la línea temporal no lleva nota", async () => {
+    servirDatos({ stats: stats({ plays: 12, fechados: 12 }) });
+    render(<Vida onFicha={() => {}} />);
+    await screen.findByText(/tus 12 visionados/);
+    expect(screen.queryByText(/tienen fecha real/)).not.toBeInTheDocument();
   });
 
   it("listas vacías: mensajes en vez de divisiones por cero", async () => {

@@ -6,6 +6,9 @@ Reglas contra la trampa (issue 12 y 19):
 - La afinidad con dirección y reparto solo cuenta lo visto antes del corte.
 - Votos y popularidad del dataset están medidos en 2017 (después del corte): el
   resultado "conservador" los excluye; el "techo" los incluye. La verdad está entre ambos.
+- Lo visto sin fecha fiable (fecha desconocida o carga en bloque, issues 20 y 21) no se
+  sabe si fue antes o después del corte: sale del universo del backtest. No entrena como
+  vista ni como no vista, y no se evalúa.
 """
 
 from __future__ import annotations
@@ -56,11 +59,17 @@ def _metricas(cand: pd.DataFrame) -> dict[str, Any]:
 
 
 def backtest(md: pd.DataFrame, E: np.ndarray, corte: str = config.CORTE_BACKTEST) -> dict[str, Any]:
-    """Resultado conservador (sin variables medidas en el futuro) con el techo al lado."""
+    """Resultado conservador (sin variables medidas en el futuro) con el techo al lado.
+
+    `md` necesita las columnas `visto` (bool) y `fprimera` (AAAA-MM-DD o vacía).
+    """
+    sin_fecha = (md.visto & md.fprimera.isna()).to_numpy()
+    md, E = md[~sin_fecha], E[~sin_fecha]
     conservador = _metricas(_ranking(md, E, corte, config.VARIABLES_CON_FUTURO))
     techo = _metricas(_ranking(md, E, corte, ()))
     return {
         "corte": corte,
+        "n_sin_fecha": int(sin_fecha.sum()),
         **conservador,
         "techo": {k: techo[k] for k in ("mediana_pct", "top10", "top20", "p100")},
         "metodo": config.VERSION_METODO,

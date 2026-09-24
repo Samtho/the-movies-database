@@ -53,8 +53,11 @@ def mapa_semana_hora(historial: list[str]) -> tuple[list[list[int]], int]:
     return mapa, con_hora
 
 
-def _negar_fecha(iso: str) -> tuple[int, ...]:
-    """Clave de orden descendente para fechas AAAA-MM-DD."""
+def _negar_fecha(iso: str | None) -> tuple[int, ...]:
+    """Clave de orden descendente para fechas AAAA-MM-DD. Sin fecha va al final: (1,) es
+    mayor que cualquier fecha negada, que empieza por un número negativo."""
+    if iso is None:
+        return (1,)
     return tuple(-int(x) for x in iso.split("-"))
 
 
@@ -78,8 +81,9 @@ def _fotos_de_personas(fichas: dict[str, Any]) -> dict[str, str]:
 def calcular_stats(export: ExportTrakt, md: pd.DataFrame, fichas: dict[str, Any], stats_previas: dict[str, Any] | None = None) -> dict[str, Any]:
     vistas_md = md[md.tmdb.isin(export.vistas)]
     match = int(len(vistas_md))
-    mensual = Counter(h[:7] for h in export.historial)
-    semana_hora, con_hora = mapa_semana_hora(export.historial)
+    # solo visionados con fecha fiable: ni fechas desconocidas ni cargas en bloque (issues 20 y 21)
+    mensual = Counter(h[:7] for h in export.historial_fiable)
+    semana_hora, con_hora = mapa_semana_hora(export.historial_fiable)
     decadas = Counter((v.anio // 10) * 10 for v in export.vistas.values() if v.anio and v.anio > 0)
     # más vistas primero; empate: la repetida más recientemente, luego por título
     repetidas = sorted((v for v in export.vistas.values() if v.veces > 1), key=lambda v: (-v.veces, _negar_fecha(v.ultima), v.titulo))[:14]
@@ -100,6 +104,7 @@ def calcular_stats(export: ExportTrakt, md: pd.DataFrame, fichas: dict[str, Any]
         "minutos": export.minutos,
         "match_dataset": match,
         "post2017": len(export.vistas) - match,
+        "fechados": len(export.historial_fiable),
         "mensual": sorted([m, n] for m, n in mensual.items()),
         "semana_hora": semana_hora,
         "horas_registradas": con_hora,

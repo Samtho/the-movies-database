@@ -90,9 +90,10 @@ describe("stats", () => {
   it("13. los totales cuadran entre sí y con el historial", () => {
     const sumaMensual = stats.mensual.reduce((a, [, n]) => a + n, 0);
     const sumaDiaHora = stats.semana_hora.flat().reduce((a, n) => a + n, 0);
-    expect(sumaMensual).toBe(stats.plays);
+    expect(sumaMensual).toBe(stats.fechados); // la línea temporal solo lleva fechas fiables
+    expect(stats.fechados).toBeLessThanOrEqual(stats.plays);
     expect(sumaDiaHora).toBe(stats.horas_registradas); // solo los visionados con hora real
-    expect(stats.horas_registradas).toBeLessThanOrEqual(stats.plays);
+    expect(stats.horas_registradas).toBeLessThanOrEqual(stats.fechados);
     expect(stats.total_vistas).toBe(Object.keys(vistas).length);
     expect(stats.match_dataset + stats.post2017).toBe(stats.total_vistas);
   });
@@ -104,6 +105,12 @@ describe("stats", () => {
   });
   it("15. ninguna fecha de visionado es futura", () => {
     const hoy = new Date().toISOString().slice(0, 10);
-    expect(Object.entries(vistas).filter(([, v]) => v.d > hoy)).toEqual([]);
+    expect(Object.entries(vistas).filter(([, v]) => v.d !== null && v.d > hoy)).toEqual([]);
+  });
+  it("16. las vistas sin fecha no pasan del total y el backtest las deja fuera", () => {
+    const sinFecha = Object.values(vistas).filter((v) => v.d === null).length;
+    expect(sinFecha).toBeLessThan(stats.total_vistas);
+    expect(gusto.backtest.n_sin_fecha).toBeLessThanOrEqual(stats.match_dataset);
+    expect(stats.mensual.map(([mes]) => mes)).not.toContain("1970-01"); // la "fecha desconocida" de Trakt
   });
 });

@@ -45,8 +45,8 @@ en `pipeline/` (cómo refrescarlos: [`pipeline/README.md`](pipeline/README.md)).
 crudos (dataset de Kaggle, export de Trakt), los intermedios (`*.pkl`) y la clave de TMDB
 **nunca** entran en git (ver `.gitignore`).
 
-El contrato de los JSON está en `src/lib/schema.ts` y se valida en CI junto con 16
-invariantes entre archivos (`tests/data/`).
+El contrato de los JSON está en `src/lib/schema.ts` y se valida en CI junto con las
+invariantes entre archivos (`tests/data/invariantes.test.ts`).
 
 ## Despliegue
 

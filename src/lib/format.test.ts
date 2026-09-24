@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatoFecha, formatoNumero, numeroEnPalabras } from "./format";
+import { fechaDeVista, formatoFecha, formatoNumero, numeroEnPalabras } from "./format";
 
 describe("formatoFecha", () => {
   it.each([
@@ -10,6 +10,14 @@ describe("formatoFecha", () => {
     ["14/06/2026", "14/06/2026"], // otro formato: tal cual, no se inventa
     ["2026-6-1", "2026-6-1"], // sin ceros: tal cual
   ])("%s -> %s", (entrada, esperado) => expect(formatoFecha(entrada)).toBe(esperado));
+});
+
+describe("fechaDeVista", () => {
+  it.each([
+    ["2026-06-14", "el 14/06/2026"],
+    [null, "sin fecha"], // fecha desconocida o carga en bloque
+    ["", "sin fecha"],
+  ])("%s -> %s", (entrada, esperado) => expect(fechaDeVista(entrada)).toBe(esperado));
 });
 
 describe("formatoNumero", () => {

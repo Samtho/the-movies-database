@@ -94,10 +94,11 @@ def test_nombre_legible(variable, esperado):
 
 
 # ---------- backtest ----------
-def preparar_backtest(md, vistas_pre, vistas_post, repetidas_despues=()):
+def preparar_backtest(md, vistas_pre, vistas_post, sin_fecha=()):
     m = md.copy()
-    fechas = {t: "2010-01-01" for t in vistas_pre} | {t: "2016-01-01" for t in vistas_post}
+    fechas = {t: "2010-01-01" for t in vistas_pre} | {t: "2016-01-01" for t in vistas_post} | {t: None for t in sin_fecha}
     m["fprimera"] = m.tmdb.map(fechas)
+    m["visto"] = m.tmdb.isin(fechas)
     return m
 
 
@@ -115,7 +116,7 @@ def test_backtest_conservador_y_techo(md, E):
     post = list(md.tmdb[md.vote_count >= 30][40:52])
     bt = backtest(preparar_backtest(md, pre, post), E)
     assert set(bt["techo"]) == {"mediana_pct", "top10", "top20", "p100"}
-    assert bt["metodo"] == 2
+    assert bt["metodo"] == 3
     assert 0 <= bt["top10"] <= 100 and bt["azar100"] > 0
 
 
@@ -124,3 +125,14 @@ def test_backtest_sin_futuro_o_sin_pasado_falla_claro(md, E):
         backtest(preparar_backtest(md, list(md.tmdb[md.vote_count >= 100][:12]), []), E)
     with pytest.raises(ValueError, match="antes de"):
         backtest(preparar_backtest(md, [], list(md.tmdb[:5])), E)
+
+
+def test_backtest_deja_fuera_lo_visto_sin_fecha(md, E):
+    pre = list(md.tmdb[md.vote_count >= 100][:12])
+    post = list(md.tmdb[md.vote_count >= 30][40:52])
+    sin_fecha = [t for t in md.tmdb[md.vote_count >= 30][60:65] if t not in pre + post]
+    base = backtest(preparar_backtest(md, pre, post), E)
+    bt = backtest(preparar_backtest(md, pre, post, sin_fecha), E)
+    assert (base["n_sin_fecha"], bt["n_sin_fecha"]) == (0, len(sin_fecha))
+    assert bt["n_test"] == base["n_test"]  # no se evalúan como descubrimientos
+    assert bt["n_cand"] == base["n_cand"] - len(sin_fecha)  # ni compiten como candidatas no vistas

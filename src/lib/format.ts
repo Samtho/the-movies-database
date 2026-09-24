@@ -7,6 +7,12 @@ export function formatoFecha(iso: string): string {
   return m ? `${m[3]}/${m[2]}/${m[1]}` : iso;
 }
 
+// Cuándo la viste, para ficha y persona: "el 14/06/2026" o "sin fecha" (fecha desconocida
+// en Trakt o registrada en una carga en bloque).
+export function fechaDeVista(iso: string | null): string {
+  return iso ? `el ${formatoFecha(iso)}` : "sin fecha";
+}
+
 // Siempre con separador de miles (1.436), también en cifras de 4 dígitos, para que
 // todas las cifras de la app se lean igual.
 export function formatoNumero(n: number, decimales = 0): string {

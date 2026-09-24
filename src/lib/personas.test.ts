@@ -30,6 +30,10 @@ describe("ultimaVista", () => {
   it("la fecha más reciente de las vistas", () => {
     expect(ultimaVista(pelis, { "2": { d: "2020-01-05", n: 1 }, "3": { d: "2021-03-01", n: 2 } })).toBe("2021-03-01");
   });
+  it("ignora las vistas sin fecha", () => {
+    expect(ultimaVista(pelis, { "2": { d: null, n: 1 }, "3": { d: "2021-03-01", n: 2 } })).toBe("2021-03-01");
+    expect(ultimaVista(pelis, { "2": { d: null, n: 1 } })).toBeNull();
+  });
   it("ninguna vista", () => expect(ultimaVista(pelis, {})).toBeNull());
   it("sin películas", () => expect(ultimaVista([], { "2": { d: "2020-01-05", n: 1 } })).toBeNull());
 });

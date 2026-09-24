@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import EChart from "../components/EChart";
 import { EstadoCarga } from "../components/EstadoCarga";
 import { Avatar, Poster } from "../components/Poster";
@@ -10,6 +10,11 @@ import { COLOR, EJE, TOOLTIP } from "../lib/theme";
 import { useDatos } from "../lib/useDatos";
 
 const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
+
+// Letra pequeña bajo un gráfico: cuántos visionados entran y por qué falta el resto.
+function Nota({ children }: { children: ReactNode }) {
+  return <p className="text-xs text-faint mt-2">{children}</p>;
+}
 
 export default function Vida({ onFicha }: { onFicha: (id: number) => void }) {
   const r = useDatos(["stats"] as const);
@@ -28,12 +33,21 @@ export default function Vida({ onFicha }: { onFicha: (id: number) => void }) {
           registrados en Trakt. Las {formatoNumero(st.post2017)} películas posteriores a 2017, que el dataset no cubre,
           se completaron con la API de TMDB.</>}>
         <div className="grid lg:grid-cols-2 gap-6 mt-10">
-          <Card titulo="Tu línea temporal (visionados por mes)"><EChart option={opciones.mensual} height={260} etiqueta="Visionados por mes" /></Card>
+          <Card titulo="Tu línea temporal (visionados por mes)">
+            <EChart option={opciones.mensual} height={260} etiqueta="Visionados por mes" />
+            {st.fechados < st.plays && (
+              <Nota>
+                {formatoNumero(st.fechados)} de {formatoNumero(st.plays)} visionados tienen fecha real. El resto lo registraste
+                sin fecha o de golpe, al cargar tu historial, y no aparece aquí.
+              </Nota>
+            )}
+          </Card>
           <Card titulo="Cuándo ves cine (día × hora local)">
             <EChart option={opciones.heat} height={260} etiqueta="Visionados por día de la semana y hora local" />
-            <p className="text-xs text-faint mt-2">
-              {formatoNumero(st.horas_registradas)} de {formatoNumero(st.plays)} visionados tienen hora registrada; el resto se importó solo con fecha y no aparece aquí.
-            </p>
+            <Nota>
+              {formatoNumero(st.horas_registradas)} de {formatoNumero(st.plays)} visionados tienen hora registrada. El resto
+              no aparece aquí: se importó solo con fecha, sin fecha o de golpe.
+            </Nota>
           </Card>
           <Card titulo="De qué época es tu cine (décadas de estreno)"><EChart option={opciones.decadas} height={300} etiqueta="Películas vistas por década de estreno" /></Card>
           <Card titulo="Tus más repetidas">

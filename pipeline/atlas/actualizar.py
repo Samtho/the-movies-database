@@ -94,7 +94,9 @@ def calcular_gusto(md: pd.DataFrame, export: ExportTrakt, previo: dict[str, Any]
 
 def actualizar(trakt: Path, raw: Path, data: Path, forzar: bool = False) -> int:
     export = cargar_export(trakt)
-    print(f"Export: {len(export.vistas)} películas vistas, {len(export.historial)} visionados, {len(export.notas)} notas")
+    print(f"Export: {len(export.vistas)} películas vistas, {export.plays} visionados, {len(export.notas)} notas")
+    print(f"  con fecha fiable: {len(export.historial_fiable)} | sin fecha: {export.sin_fecha} | "
+          f"de cargas en bloque: {export.en_bloque}")
     for motivo, n in export.descartadas.items():
         print(f"  aviso: {n} descartadas ({motivo})")
 
@@ -116,6 +118,7 @@ def actualizar(trakt: Path, raw: Path, data: Path, forzar: bool = False) -> int:
         "gusto": gusto,
         "similares": previos["similares"],
         "stats": calcular_stats(export, md, fichas, previos["stats"]),
+        # d: última fecha fiable; None (null) si la viste sin fecha (issue 20)
         "vistas": {str(t): {"d": v.ultima, "n": v.veces} for t, v in sorted(export.vistas.items())},
     }
     aplicar_derivados(datos)
@@ -123,7 +126,8 @@ def actualizar(trakt: Path, raw: Path, data: Path, forzar: bool = False) -> int:
     veredicto = revisar(previos["gusto"], gusto)
     bt = gusto["backtest"]
     print(f"AUC {gusto['auc_cv'][0]:.3f} ± {gusto['auc_cv'][1]:.3f} | backtest conservador top-10% {bt['top10']}% "
-          f"(techo {bt['techo']['top10']}%), {bt['p100']} de su top-100 (azar ~{bt['azar100']})")
+          f"(techo {bt['techo']['top10']}%), {bt['p100']} de su top-100 (azar ~{bt['azar100']}), "
+          f"{bt['n_sin_fecha']} vistas sin fecha fiable fuera del backtest")
     print(f"Fichas nuevas: {len(informe.fichas_nuevas)} | cambios de 'visto' en fichas: {informe.fichas_cambiadas}, "
           f"en galaxia: {informe.galaxia_cambiadas} | nodos nuevos en el grafo: {len(informe.grafo_nodos_nuevos)} "
           f"(sin personas en el grafo: {len(informe.grafo_sin_personas)}) | títulos en español: {informe.titulos_es}")

@@ -1,7 +1,7 @@
 import { EstadoCarga } from "./components/EstadoCarga";
 import { Modal } from "./components/Modal";
 import { Avatar, Poster } from "./components/Poster";
-import { formatoFecha, formatoNumero } from "./lib/format";
+import { fechaDeVista, formatoNumero } from "./lib/format";
 import { generoEs } from "./lib/generos";
 import { useDatos } from "./lib/useDatos";
 
@@ -40,7 +40,7 @@ export default function FichaModal({ id, onClose, onOpen, onPersona }: {
           <div className="flex flex-wrap gap-2 mt-3.5">
             {vista && (
               <span className="text-[12px] font-bold px-3 py-1.5 rounded-full bg-leaf/15 text-leaf border border-leaf/40">
-                LA VISTE el {formatoFecha(vista.d)}{vista.n > 1 ? ` · ${vista.n} veces` : ""}
+                LA VISTE {fechaDeVista(vista.d)}{vista.n > 1 ? ` · ${vista.n} veces` : ""}
               </span>
             )}
             {candidata && (
