@@ -22,6 +22,15 @@ Y en `pipeline/.env` (fuera de git): `TMDB_API_KEY=tu_clave`.
 
 ## Refrescar los datos
 
+Lo más cómodo: descarga el export de Trakt (se queda en Descargas) y ejecuta
+
+```bash
+bash ~/Desktop/Side\ Projects/the-movies-database/pipeline/refrescar.sh
+```
+
+El script encuentra el export más reciente, prepara Python la primera vez y ejecuta los
+dos pasos de abajo. Paso a paso, a mano:
+
 ```bash
 cd pipeline
 python -m atlas.tmdb       --trakt raw/<export>.zip --raw raw --data ../public/data   # necesita red

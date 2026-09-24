@@ -35,8 +35,8 @@ from .estadisticas import calcular_stats
 from .modelo import (auc_validacion_cruzada, coeficientes_legibles, construir_features, embeddings_texto, entrenar,
                      porques)
 from .puerta import revisar
-from .sincronizar import Informe, sincronizar_fichas, sincronizar_galaxia, sincronizar_grafo
-from .trakt import ExportTrakt, cargar_export
+from .sincronizar import ErrorSincronizacion, Informe, sincronizar_fichas, sincronizar_galaxia, sincronizar_grafo
+from .trakt import ErrorExport, ExportTrakt, cargar_export
 
 ARCHIVOS_ESCRITOS = ("fichas", "galaxia", "grafo", "gusto", "similares", "stats", "vistas")
 
@@ -150,7 +150,11 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--data", required=True, type=Path, help="carpeta public/data de la web")
     p.add_argument("--forzar", action="store_true", help="publicar aunque la puerta de calidad falle")
     a = p.parse_args(argv)
-    return actualizar(a.trakt, a.raw, a.data, a.forzar)
+    try:
+        return actualizar(a.trakt, a.raw, a.data, a.forzar)
+    except (ErrorExport, ErrorSincronizacion, FileNotFoundError) as e:
+        print(f"\n{e}\nNo se escribió nada.", file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":

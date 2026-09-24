@@ -17,26 +17,39 @@ import argparse
 import json
 import os
 import sys
+import threading
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
 from collections.abc import Callable, Iterable
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any
 
 from .archivos import escribir_json, leer_json
-from .trakt import cargar_export
+from .trakt import ErrorExport, cargar_export
 
 API = "https://api.themoviedb.org/3"
-PAUSA = 0.03  # ~30 peticiones por segundo, por debajo del límite de TMDB
-GUARDAR_CADA = 200
+HILOS = 6  # peticiones en paralelo: ~40 por segundo, por debajo del límite de TMDB (~50)
+GUARDAR_CADA = 500
+ABORTAR_TRAS = 12  # si estas primeras peticiones fallan todas, se para (sin red o clave inválida)
 
 Pedidor = Callable[[str, dict[str, str]], dict[str, Any]]
 
 
 class ErrorTMDB(Exception):
     """Fallo de la API de TMDB (con el id afectado cuando se conoce)."""
+
+
+class NoExisteEnTMDB(ErrorTMDB):
+    """La API respondió, pero esa película ya no existe (404)."""
+
+
+def ficha_minima(titulo: str, anio: int | None) -> dict[str, Any]:
+    """Ficha con lo poco que se sabe por Trakt, para una película que TMDB ya no tiene."""
+    return {"t": titulo, "a": anio or 0, "g": [], "rt": None, "va": None, "nv": 0, "p": None, "o": "",
+            "d": None, "dp": None, "c": [], "cp": []}
 
 
 def clave_api(env_path: Path = Path(".env")) -> str:
@@ -63,7 +76,9 @@ def crear_pedidor(clave: str, intentos: int = 4, espera: float = 1.0,
                     return json.load(r)
             except urllib.error.HTTPError as e:
                 if e.code == 404:
-                    raise ErrorTMDB(f"{ruta}: no existe en TMDB (404)") from None
+                    raise NoExisteEnTMDB(f"{ruta}: no existe en TMDB (404)") from None
+                if e.code == 401:
+                    raise ErrorTMDB(f"{ruta}: HTTP 401, la clave de TMDB no es válida") from None
                 if e.code not in (429, 500, 502, 503, 504):
                     raise ErrorTMDB(f"{ruta}: HTTP {e.code}") from None
                 ultimo = e
@@ -99,20 +114,69 @@ def ficha_desde_api(d: dict[str, Any]) -> dict[str, Any]:
 
 def completar(ids: Iterable[int], cache: dict[str, Any], pedir: Pedidor, ruta: Callable[[int], str],
               parametros: dict[str, str], transformar: Callable[[dict[str, Any]], Any],
-              guardar: Callable[[], None] = lambda: None, pausa: float = PAUSA) -> list[tuple[int, str]]:
-    """Pide a TMDB solo los ids que faltan en la caché. Devuelve los fallidos (id, motivo)."""
+              guardar: Callable[[], None] = lambda: None, hilos: int = HILOS, etiqueta: str = "",
+              si_no_existe: Callable[[int], Any] | None = None) -> list[tuple[int, str]]:
+    """Pide a TMDB solo los ids que faltan en la caché, con varias peticiones en paralelo.
+
+    La caché solo se toca desde este hilo (los hilos solo piden) y se guarda cada
+    GUARDAR_CADA respuestas: si el proceso se corta, lo ya descargado no se pierde.
+    Si TMDB responde que una película no existe (404) y hay `si_no_existe`, se guarda
+    ese valor en la caché (no se vuelve a pedir); si no, cuenta como fallo.
+    Devuelve los fallidos (id, motivo), ordenados por id.
+    """
     fallidos: list[tuple[int, str]] = []
     pendientes = [i for i in ids if str(i) not in cache]
-    for n, tmdb in enumerate(pendientes, 1):
+
+    # Parada temprana: si las primeras ABORTAR_TRAS peticiones fallan todas (sin red o
+    # clave inválida), se para en vez de agotar reintentos con miles de películas. Lo
+    # deciden los propios hilos, para que no sigan pidiendo mientras este hilo se pone al día.
+    parar = threading.Event()
+    candado = threading.Lock()
+    conteo = {"respuestas": 0, "fallos": 0, "primer_fallo": ""}
+
+    def una(tmdb: int) -> Any:
+        if parar.is_set():
+            raise ErrorTMDB("cancelada")
         try:
-            cache[str(tmdb)] = transformar(pedir(ruta(tmdb), parametros))
+            resultado = transformar(pedir(ruta(tmdb), parametros))
+        except NoExisteEnTMDB:
+            with candado:
+                conteo["respuestas"] += 1  # la API respondió: la red y la clave funcionan
+            raise
         except ErrorTMDB as e:
-            fallidos.append((tmdb, str(e)))
-        if n % GUARDAR_CADA == 0:
-            guardar()
-        time.sleep(pausa)
+            with candado:
+                conteo["fallos"] += 1
+                conteo["primer_fallo"] = conteo["primer_fallo"] or str(e)
+                if conteo["respuestas"] == 0 and conteo["fallos"] >= ABORTAR_TRAS:
+                    parar.set()
+            raise
+        with candado:
+            conteo["respuestas"] += 1
+        return resultado
+    with ThreadPoolExecutor(max_workers=max(1, hilos)) as pool:
+        futuros = {pool.submit(una, t): t for t in pendientes}
+        for n, futuro in enumerate(as_completed(futuros), 1):
+            tmdb = futuros[futuro]
+            try:
+                cache[str(tmdb)] = futuro.result()
+            except NoExisteEnTMDB as e:
+                if si_no_existe is None:
+                    fallidos.append((tmdb, str(e)))
+                else:
+                    cache[str(tmdb)] = si_no_existe(tmdb)
+            except ErrorTMDB as e:
+                fallidos.append((tmdb, str(e)))
+            if parar.is_set():
+                pool.shutdown(wait=False, cancel_futures=True)
+                guardar()
+                raise ErrorTMDB(f"Las primeras {ABORTAR_TRAS} peticiones a TMDB fallaron ({conteo['primer_fallo']}). "
+                                "Revisa la conexión a internet y la clave en pipeline/.env.")
+            if n % GUARDAR_CADA == 0:
+                guardar()
+                if etiqueta:
+                    print(f"  {etiqueta}: {n} de {len(pendientes)}", flush=True)
     guardar()
-    return fallidos
+    return sorted(fallidos)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -122,7 +186,14 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--data", required=True, type=Path, help="carpeta public/data")
     p.add_argument("--sin-titulos", action="store_true", help="no pedir títulos en español")
     a = p.parse_args(argv)
+    try:
+        return _completar_todo(a)
+    except (ErrorTMDB, ErrorExport) as e:
+        print(f"\n{e}", file=sys.stderr)
+        return 1
 
+
+def _completar_todo(a: argparse.Namespace) -> int:
     pedir = crear_pedidor(clave_api())
     fichas = leer_json(a.data / "fichas.json")
     export = cargar_export(a.trakt)
@@ -133,22 +204,27 @@ def main(argv: list[str] | None = None) -> int:
     en_dataset = set(pickle.load(open(a.raw / "md_full.pkl", "rb")).tmdb)
     nuevas = sorted(t for t in export.vistas if t not in en_dataset and str(t) not in fichas)
     print(f"Fichas: {len(nuevas)} vistas fuera del dataset; {sum(1 for t in nuevas if str(t) not in cache)} por pedir")
+    # si TMDB ya no tiene la película (404), ficha mínima con lo que dice Trakt
     fallidos = completar(nuevas, cache, pedir, lambda t: f"/movie/{t}", {"append_to_response": "credits"},
-                         ficha_desde_api, guardar=lambda: escribir_json(ruta_cache, cache))
+                         ficha_desde_api, guardar=lambda: escribir_json(ruta_cache, cache), etiqueta="fichas",
+                         si_no_existe=lambda t: ficha_minima(export.vistas[t].titulo, export.vistas[t].anio))
+    if fallidos:
+        print(f"\n{len(fallidos)} fichas no se pudieron descargar (vuelve a lanzar el comando para reintentarlas):", file=sys.stderr)
+        for tmdb, motivo in fallidos[:20]:
+            print(f"  {tmdb}: {motivo}", file=sys.stderr)
+        return 1
 
     if not a.sin_titulos:
         ruta_titulos = a.raw / "titulos_es.json"
         titulos = leer_json(ruta_titulos) if ruta_titulos.exists() else {}
         todas = sorted({int(k) for k in fichas} | set(nuevas))
         print(f"Títulos en español: {sum(1 for t in todas if str(t) not in titulos)} por pedir (de {len(todas)})")
-        fallidos += completar(todas, titulos, pedir, lambda t: f"/movie/{t}", {"language": "es-ES"},
-                              lambda d: d.get("title") or "", guardar=lambda: escribir_json(ruta_titulos, titulos))
-
-    if fallidos:
-        print(f"\n{len(fallidos)} peticiones fallaron (vuelve a lanzar el comando para reintentarlas):", file=sys.stderr)
-        for tmdb, motivo in fallidos[:20]:
-            print(f"  {tmdb}: {motivo}", file=sys.stderr)
-        return 1
+        sin_titulo = completar(todas, titulos, pedir, lambda t: f"/movie/{t}", {"language": "es-ES"},
+                               lambda d: d.get("title") or "", guardar=lambda: escribir_json(ruta_titulos, titulos),
+                               etiqueta="títulos", si_no_existe=lambda t: "")
+        # los títulos son un extra de la búsqueda: si faltan algunos, no se bloquea el refresco
+        if sin_titulo:
+            print(f"Aviso: {len(sin_titulo)} títulos en español quedaron pendientes; se pedirán en el próximo refresco.")
     print("TMDB al día.")
     return 0
 
