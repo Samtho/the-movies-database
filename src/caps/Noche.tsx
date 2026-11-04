@@ -13,7 +13,6 @@ import {
 import { COLOR } from "../lib/theme";
 import { useDatos } from "../lib/useDatos";
 
-const MEDALLAS = ["🥇", "🥈", "🥉"];
 
 // ¿Qué veo esta noche? El recomendador personal: candidatas NO vistas, ordenadas por el modelo de gusto.
 export default function Noche({ onFicha }: { onFicha: (id: number) => void }) {
@@ -60,7 +59,7 @@ export default function Noche({ onFicha }: { onFicha: (id: number) => void }) {
         <button type="button" disabled={candidatas.length === 0}
           onClick={() => setSorpresa(elegirSorpresa(candidatas))}
           title={`Una al azar entre las ${TOPE_SORPRESA} mejores de la lista actual`}
-          className="ml-auto px-4 py-1.5 rounded-full text-xs font-bold bg-blood/90 text-ivory hover:bg-blood transition-colors disabled:opacity-40">
+          className="ml-auto px-4 py-1.5 rounded-full text-xs font-medium bg-blood/90 text-ivory hover:bg-blood transition-colors disabled:opacity-40">
           🎲 Sorpréndeme
         </button>
       </Item>
@@ -84,14 +83,14 @@ export default function Noche({ onFicha }: { onFicha: (id: number) => void }) {
                 <div className="relative rounded-xl overflow-hidden border border-hairline group-hover:border-marquee transition-colors aspect-[2/3] bg-stage-soft">
                   <Poster ruta={c.f.p} ancho={342} alt={c.f.t} className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-500"
                     respaldo={<span className="absolute inset-x-2 top-8 text-xs text-faint">{c.f.t}</span>} />
-                  <span className="absolute top-1.5 left-1.5 text-[10px] font-bold bg-stage/85 text-marquee rounded px-1.5 py-0.5">
-                    {sorpresa == null && i < MEDALLAS.length ? `${MEDALLAS[i]} ` : ""}{Math.round(c.s * 100)}%
+                  <span className="absolute top-1.5 left-1.5 text-[11px] font-medium tabular-nums bg-stage/85 text-marquee rounded px-1.5 py-0.5">
+                    {sorpresa == null && i < 3 ? `#${i + 1} · ` : ""}{Math.round(c.s * 100)}%
                   </span>
                 </div>
                 <div className="mt-2 text-sm font-medium leading-tight truncate">{c.f.t}</div>
                 <div className="text-xs text-faint">{c.f.a}{c.f.rt ? ` · ${c.f.rt} min` : ""}</div>
                 {c.r.length > 0 && (
-                  <div className="text-[10px] text-marquee/80 truncate" title={porques(c.r).join(" · ")}>
+                  <div className="text-[11px] text-marquee/80 truncate" title={porques(c.r).join(" · ")}>
                     {porques(c.r.slice(0, 2)).join(" · ")}
                   </div>
                 )}

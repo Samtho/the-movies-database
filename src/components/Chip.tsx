@@ -11,7 +11,7 @@ export function Chip({ activo, onClick, children, variante = "solido", color, cl
   className?: string;
 }) {
   const estilo = variante === "solido"
-    ? activo ? "bg-marquee text-stage border-marquee font-bold" : "border-hairline text-ivory-dim hover:border-marquee"
+    ? activo ? "bg-marquee text-stage border-marquee font-medium" : "border-hairline text-ivory-dim hover:border-marquee"
     : activo ? "border-marquee text-marquee" : "border-hairline text-faint hover:text-ivory-dim";
   return (
     <button type="button" onClick={onClick} aria-pressed={activo}

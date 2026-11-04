@@ -45,9 +45,9 @@ export default function PersonaModal({ nombre, onClose, onPeli }: {
               <button type="button" key={p.id} onClick={() => onPeli(p.id)} className="group text-left">
                 <div className="relative rounded-xl overflow-hidden border border-hairline group-hover:border-marquee transition-colors aspect-[2/3] bg-stage">
                   <Poster ruta={p.f.p} alt={p.f.t} className="w-full h-full object-cover" />
-                  <span className="absolute inset-x-1 bottom-1 text-[9px] text-faint truncate pointer-events-none">{p.f.t}</span>
+                  <span className="absolute inset-x-1 bottom-1 text-[11px] text-faint truncate pointer-events-none">{p.f.t}</span>
                   {p.f.v === 1 && <span className="absolute top-1.5 right-1.5 h-2.5 w-2.5 rounded-full bg-leaf shadow" aria-label="vista" />}
-                  {p.rol === "dirige" && <span className="absolute top-1.5 left-1.5 text-[9px] font-bold bg-blood/90 text-ivory rounded px-1 py-0.5">DIR</span>}
+                  {p.rol === "dirige" && <span className="absolute top-1.5 left-1.5 text-[11px] font-medium bg-blood/90 text-ivory rounded px-1.5 py-0.5">Dirige</span>}
                 </div>
                 <div className="mt-1.5 text-xs font-medium leading-tight truncate">{p.f.t}</div>
                 <div className="text-[11px] text-faint">

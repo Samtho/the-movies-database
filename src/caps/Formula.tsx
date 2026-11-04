@@ -36,11 +36,11 @@ export default function Formula() {
           {bench.length === 0 && <p className="text-sm text-faint">No hay resultados del torneo en los datos.</p>}
           {bench.map((m, i) => (
             <div key={m.nombre} className="flex items-center gap-3 py-1.5">
-              <span className={`flex-1 text-sm truncate ${i === 0 ? "font-bold text-marquee" : "text-ivory-dim"}`}>{m.nombre}</span>
+              <span className={`flex-1 text-sm truncate ${i === 0 ? "font-medium text-marquee" : "text-ivory-dim"}`}>{m.nombre}</span>
               <div className="w-44 md:w-56 h-4 rounded bg-hairline/60 overflow-hidden">
                 <div className={`h-full rounded ${i === 0 ? "bg-marquee" : "bg-[#4a4a55]"}`} style={{ width: `${anchoAuc(m.auc, ganador.auc) * 100}%` }} />
               </div>
-              <span className={`text-sm tabular-nums w-12 text-right ${i === 0 ? "text-marquee font-bold" : "text-faint"}`}>{formatoNumero(m.auc, 3)}</span>
+              <span className={`text-sm tabular-nums w-12 text-right ${i === 0 ? "text-marquee font-medium" : "text-faint"}`}>{formatoNumero(m.auc, 3)}</span>
             </div>
           ))}
           <p className="text-xs text-faint mt-4">Torneo de julio de 2026 sobre las películas muy visibles (100 votos o más). El modelo en producción, con las variables de texto y reentrenado en cada refresco, obtiene en ese mismo universo:</p>

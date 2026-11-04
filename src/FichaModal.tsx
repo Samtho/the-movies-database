@@ -39,12 +39,12 @@ export default function FichaModal({ id, onClose, onOpen, onPersona }: {
           </p>
           <div className="flex flex-wrap gap-2 mt-3.5">
             {vista && (
-              <span className="text-[12px] font-bold px-3 py-1.5 rounded-full bg-leaf/15 text-leaf border border-leaf/40">
+              <span className="text-[12px] font-medium px-3 py-1.5 rounded-full bg-leaf/15 text-leaf border border-leaf/40">
                 LA VISTE {fechaDeVista(vista.d)}{vista.n > 1 ? ` · ${vista.n} veces` : ""}
               </span>
             )}
             {candidata && (
-              <span className="text-[12px] font-bold px-3 py-1.5 rounded-full bg-marquee/15 text-marquee border border-marquee/40">
+              <span className="text-[12px] font-medium px-3 py-1.5 rounded-full bg-marquee/15 text-marquee border border-marquee/40">
                 AFINIDAD {Math.round(candidata.s * 100)}%
               </span>
             )}
@@ -67,7 +67,7 @@ export default function FichaModal({ id, onClose, onOpen, onPersona }: {
                     <button type="button" key={s} onClick={() => onOpen(s)} title={`${sf.t} (${sf.a})`} aria-label={`${sf.t} (${sf.a})`}
                       className="relative rounded-lg overflow-hidden border border-hairline hover:border-marquee transition-colors aspect-[2/3] bg-stage">
                       <Poster ruta={sf.p} alt="" className="w-full h-full object-cover" />
-                      <span className="absolute inset-x-1 bottom-1 text-[9px] text-faint truncate pointer-events-none">{sf.t}</span>
+                      <span className="absolute inset-x-1 bottom-1 text-[11px] text-faint truncate pointer-events-none">{sf.t}</span>
                       {sf.v === 1 && <span className="absolute top-1 right-1 h-2.5 w-2.5 rounded-full bg-leaf shadow" aria-label="vista" />}
                     </button>
                   );
@@ -90,7 +90,7 @@ function PersonaBoton({ nombre, foto, rol, onPersona }: {
       <Avatar ruta={foto} nombre={nombre} tamano="h-12 w-12" className="text-sm group-hover:border-marquee transition-colors" />
       <div>
         <div className="text-sm font-semibold leading-tight group-hover:text-marquee transition-colors">{nombre}</div>
-        <div className="text-[10px] text-faint uppercase tracking-wide">{rol}</div>
+        <div className="text-xs text-faint">{rol}</div>
       </div>
     </button>
   );

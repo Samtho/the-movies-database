@@ -52,7 +52,7 @@ export default function Marquesina({ onFicha, irA }: { onFicha: (id: number) => 
           {kpis.map((k) => (
             <div key={k.l} className="text-center">
               <CountUp to={k.v} className="font-display text-5xl md:text-6xl font-semibold text-marquee" />
-              <div className="text-xs text-faint mt-1 tracking-[0.15em] uppercase">{k.l}</div>
+              <div className="text-sm text-faint mt-1">{k.l}</div>
             </div>
           ))}
         </motion.div>

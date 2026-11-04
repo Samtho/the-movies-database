@@ -23,7 +23,7 @@ body {
 }
 ::selection { background: var(--color-marquee); color: #1a1408; }
 .font-display { font-family: var(--font-display); }
-.kicker { font-size: 12px; letter-spacing: 0.26em; text-transform: uppercase; color: var(--color-marquee); font-weight: 700; }
+.kicker { font-size: 13px; letter-spacing: 0.01em; color: var(--color-marquee); font-weight: 500; }
 
 /* grano de celuloide */
 .grain::after {
@@ -32,10 +32,8 @@ body {
 }
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-/* luz de marquesina bajo el nav */
-.marquee-glow { box-shadow: 0 12px 60px -18px rgba(240,180,41,.25); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
 /* kicker pequeño para títulos de tarjeta */
-.kicker-sm { font-size: 10px; }
+.kicker-sm { font-size: 12px; }

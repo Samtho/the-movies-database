@@ -35,7 +35,7 @@ export default function App() {
     <MotionConfig reducedMotion="user">
       <div className="grain min-h-screen bg-stage">
         {/* marquesina de navegación */}
-        <header className="sticky top-0 z-[80] bg-stage/85 backdrop-blur-md border-b border-hairline marquee-glow">
+        <header className="sticky top-0 z-[80] bg-stage/85 backdrop-blur-md border-b border-hairline">
           <div className="max-w-[1500px] mx-auto px-6 md:px-12 h-16 flex items-center justify-between gap-4">
             <button type="button" onClick={() => irA("inicio")} className="font-display font-semibold text-lg whitespace-nowrap">
               The Movies <span className="text-marquee">DB</span><span className="text-blood">.</span>
@@ -43,7 +43,7 @@ export default function App() {
             <nav className="flex gap-1 overflow-x-auto no-scrollbar" aria-label="Capítulos">
               {CAPS.slice(1).map((c) => (
                 <button type="button" key={c.id} onClick={() => irA(c.id)} aria-current={cap === c.id ? "page" : undefined}
-                  className={`px-3.5 py-1.5 rounded-full text-[13px] whitespace-nowrap transition-colors ${cap === c.id ? "bg-marquee text-stage font-bold" : "text-ivory-dim hover:text-marquee"}`}>
+                  className={`px-3.5 py-1.5 rounded-full text-[13px] whitespace-nowrap transition-colors ${cap === c.id ? "bg-marquee text-stage font-medium" : "text-ivory-dim hover:text-marquee"}`}>
                   {c.nav}
                 </button>
               ))}

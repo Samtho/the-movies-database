@@ -79,12 +79,12 @@ export default function Grafo({ onFicha }: { onFicha: (id: number) => void }) {
           <span className="font-display text-2xl font-semibold">{nf.l}</span>
           <span className="text-xs text-faint">{rolDe(nf)}{nf.t === "m" ? ` · ${nf.a}` : ""}</span>
           {vistasFoco && (
-            <span className="text-xs px-2.5 py-1 rounded-full bg-marquee/15 text-marquee border border-marquee/40 font-bold">
+            <span className="text-xs px-2.5 py-1 rounded-full bg-marquee/15 text-marquee border border-marquee/40 font-medium">
               has visto {formatoNumero(vistasFoco.vistas)} de sus {formatoNumero(vistasFoco.total)}
             </span>
           )}
           {nf.t === "m" && (
-            <button type="button" onClick={() => onFicha(nf.id)} className="text-xs px-3 py-1.5 rounded-full bg-marquee text-stage font-bold hover:brightness-110">Abrir ficha →</button>
+            <button type="button" onClick={() => onFicha(nf.id)} className="text-xs px-3 py-1.5 rounded-full bg-marquee text-stage font-medium hover:brightness-110">Abrir ficha →</button>
           )}
         </Item>
       )}

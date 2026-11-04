@@ -57,7 +57,7 @@ export default function Vida({ onFicha }: { onFicha: (id: number) => void }) {
                   <button type="button" key={x.id} onClick={() => onFicha(x.id!)} title={`${x.t} · ${x.n} veces`}
                     className="relative rounded-lg overflow-hidden border border-hairline hover:border-marquee transition-colors aspect-[2/3] bg-stage">
                     <Poster ruta={x.p} alt={x.t} className="w-full h-full object-cover" />
-                    <span className="absolute bottom-1 right-1 text-[10px] font-bold bg-stage/85 text-marquee rounded px-1.5 py-0.5">×{x.n}</span>
+                    <span className="absolute bottom-1 right-1 text-[11px] font-medium tabular-nums bg-stage/85 text-marquee rounded px-1.5 py-0.5">×{x.n}</span>
                   </button>
                 ))}
               </div>
@@ -73,7 +73,7 @@ export default function Vida({ onFicha }: { onFicha: (id: number) => void }) {
                 {lista.slice(0, 9).map((d, i) => (
                   <div key={d.n} className="flex items-center gap-3 py-1.5">
                     <span className="text-faint text-xs w-4 text-right">{i + 1}</span>
-                    <Avatar ruta={d.p} nombre={d.n} tamano="h-8 w-8" className="text-[10px]" />
+                    <Avatar ruta={d.p} nombre={d.n} tamano="h-8 w-8" className="text-[11px]" />
                     <span className="flex-1 text-sm truncate">{d.n}</span>
                     <span className="h-1.5 rounded-full bg-marquee/70" style={{ width: `${proporcion(d.c, tope) * 90}px` }} />
                     <span className="text-xs text-faint w-7 text-right">{d.c}</span>

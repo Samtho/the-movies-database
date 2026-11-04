@@ -54,7 +54,7 @@ export function Modal({ titulo, onClose, capa, children }: {
     <motion.div className="fixed inset-0 bg-stage/90 backdrop-blur-md overflow-y-auto no-scrollbar" style={{ zIndex: capa }}
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
       <motion.div ref={panel} role="dialog" aria-modal="true" aria-labelledby={idTitulo} tabIndex={-1} onKeyDown={atraparFoco}
-        className="relative max-w-5xl mx-auto my-8 md:my-14 rounded-3xl border border-hairline bg-stage-soft p-6 md:p-10 marquee-glow outline-none"
+        className="relative max-w-5xl mx-auto my-8 md:my-14 rounded-3xl border border-hairline bg-stage-soft p-6 md:p-10 outline-none"
         initial={{ y: 40, opacity: 0, scale: 0.98 }} animate={{ y: 0, opacity: 1, scale: 1 }}
         exit={{ y: 24, opacity: 0 }} transition={{ duration: 0.35, ease: [0.22, 0.7, 0.2, 1] }}
         onClick={(e) => e.stopPropagation()}>
