@@ -38,8 +38,9 @@ python -m atlas.actualizar --trakt raw/<export>.zip --raw raw --data ../public/d
 cd .. && npm run check && git add public/data && git commit -m "Datos: refresco <mes>" && git push
 ```
 
-`atlas.tmdb` pide a la API solo lo que falta (fichas de lo que viste después de 2017 y
-títulos en español). Si se corta, vuelve a lanzarlo: sigue donde iba.
+`atlas.tmdb` pide a la API solo lo que falta: fichas de lo que viste después de 2017, el
+texto de tus películas calificadas, las recomendaciones de tus favoritas (una vez por
+favorita) con las fichas de las sugeridas, y títulos en español. Si se corta, vuelve a lanzarlo: sigue donde iba.
 
 `atlas.actualizar` no escribe nada si algo falla, y tiene una puerta de calidad: si el
 AUC cae más de 0,02 o el backtest más de 10 puntos frente al refresco anterior, se
@@ -51,6 +52,9 @@ detiene y explica por qué (`--forzar` para publicar igualmente si el cambio es 
 |---|---|---|
 | Leer el export | `atlas/trakt.py` | Primera y última vez que viste cada película, notas, historial con hora. Fechas no fiables: la "fecha desconocida" de Trakt (1970-01-01) y las cargas en bloque (10 o más visionados en 12 horas). Esas películas cuentan como vistas, pero sin fecha |
 | Modelo de gusto | `atlas/modelo.py` | Regresión logística, AUC en validación cruzada 5-fold sobre películas con 100 votos o más |
+| Tus notas | `atlas/notas.py` | Afinidad de cada candidata con lo que calificaste (contenido, cada nota pesa `nota - 7`). Se valida dejando fuera cada nota y solo cambia el orden si la correlación supera al azar (~2/raíz(n-1)). En noviembre de 2026 no lo hace: tus notas siguen a la nota media de TMDB (0,57), no al contenido (0,05) |
+| Calidad | `atlas/notas.py` | Si la nota media de TMDB predice tus notas por encima del azar, el orden suma esa nota ponderada por votos (`PESO_CALIDAD`; 0 la apaga). Activa desde noviembre de 2026 |
+| Porque te gustó | `atlas/recomendaciones.py` | Recomendaciones de TMDB para tus favoritas (8 o más), sin lo visto ni lo no estrenado, sin repetir entre favoritas. No dependen del dataset de 2017 |
 | Backtest | `atlas/backtest.py` | Corte en 2015 con la PRIMERA fecha de visionado. Conservador (sin votos ni popularidad, medidos en 2017) y techo (con ellos). Lo visto sin fecha fiable queda fuera |
 | Estadísticas | `atlas/estadisticas.py` | Línea temporal y mapa día × hora solo con fechas fiables; horas de relleno fuera del mapa; hora local por etapas (`config.py`) |
 | Sincronizar | `atlas/sincronizar.py` | "Visto" en fichas, galaxia y grafo; fichas nuevas desde la caché de TMDB |

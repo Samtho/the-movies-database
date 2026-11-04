@@ -2,13 +2,13 @@ import { useMemo, useState } from "react";
 import { Buscador } from "../components/Buscador";
 import { Chip } from "../components/Chip";
 import { EstadoCarga } from "../components/EstadoCarga";
-import { Poster } from "../components/Poster";
+import { TarjetaPelicula } from "../components/TarjetaPelicula";
 import { Bloque, Item } from "../components/ui";
 import { formatoNumero } from "../lib/format";
 import { generoEs } from "../lib/generos";
 import {
   buscarPeliculas, decadasDe, elegirSorpresa, filtrarCandidatas, generosFrecuentes,
-  MINUTOS_MAX, MINUTOS_MIN, TOPE_SORPRESA, unirCandidatas, type FiltrosNoche,
+  MINUTOS_MAX, MINUTOS_MIN, porcentajeScore, TOPE_SORPRESA, unirCandidatas, unirPorque, type FiltrosNoche, type GrupoConFichas,
 } from "../lib/noche";
 import { COLOR } from "../lib/theme";
 import { useDatos } from "../lib/useDatos";
@@ -22,6 +22,7 @@ export default function Noche({ onFicha }: { onFicha: (id: number) => void }) {
 
   const datos = r.estado === "listo" ? r.datos : null;
   const todas = useMemo(() => (datos ? unirCandidatas(datos[1].candidatos, datos[0]) : []), [datos]);
+  const grupos = useMemo(() => (datos ? unirPorque(datos[1].porque.grupos, datos[0]) : []), [datos]);
   const generos = useMemo(() => generosFrecuentes(todas), [todas]);
   const decadas = useMemo(() => decadasDe(todas), [todas]);
   const candidatas = useMemo(() => filtrarCandidatas(todas, filtros), [todas, filtros]);
@@ -37,9 +38,12 @@ export default function Noche({ onFicha }: { onFicha: (id: number) => void }) {
   const porques = (idx: number[]) => idx.map((i) => gusto.leyenda[i]).filter(Boolean);
 
   return (
+    <>
     <Bloque kicker="Capítulo 4 · ¿qué veo esta noche?"
       titulo={<>{formatoNumero(todas.length)} candidatas. <span className="text-marquee">Ninguna la has visto.</span></>}
-      intro="Ordenadas por tu modelo de gusto: qué probabilidad hay de que esta película sea para ti, según todo lo que ya has visto. Filtra por humor del día o pide una sorpresa.">
+      intro={gusto.notas.calidad_activa
+        ? "Ordenadas por tu modelo de gusto (qué probabilidad hay de que la veas, según todo lo que ya has visto) y por su nota en TMDB, que es lo que mejor predice tus notas. Filtra por humor del día o pide una sorpresa."
+        : "Ordenadas por tu modelo de gusto: qué probabilidad hay de que esta película sea para ti, según todo lo que ya has visto. Filtra por humor del día o pide una sorpresa."}>
       <Item className="mt-6 flex flex-wrap items-center gap-2">
         {generos.map((g) => (
           <Chip key={g} activo={filtros.genero === g} onClick={() => cambiarFiltros({ genero: filtros.genero === g ? null : g })}>{generoEs(g)}</Chip>
@@ -76,19 +80,11 @@ export default function Noche({ onFicha }: { onFicha: (id: number) => void }) {
             onClick={() => cambiarFiltros({ genero: null, decada: null, maxMinutos: MINUTOS_MAX })}>Quitar filtros</button>
         </Item>
       ) : (
-        <div className="mt-7 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-4">
+        <div data-testid="candidatas" className="mt-7 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-4">
           {lista.map((c, i) => (
             <Item key={c.id}>
-              <button type="button" onClick={() => onFicha(c.id)} className="group w-full text-left">
-                <div className="relative rounded-xl overflow-hidden border border-hairline group-hover:border-marquee transition-colors aspect-[2/3] bg-stage-soft">
-                  <Poster ruta={c.f.p} ancho={342} alt={c.f.t} className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-500"
-                    respaldo={<span className="absolute inset-x-2 top-8 text-xs text-faint">{c.f.t}</span>} />
-                  <span className="absolute top-1.5 left-1.5 text-[11px] font-medium tabular-nums bg-stage/85 text-marquee rounded px-1.5 py-0.5">
-                    {sorpresa == null && i < 3 ? `#${i + 1} · ` : ""}{Math.round(c.s * 100)}%
-                  </span>
-                </div>
-                <div className="mt-2 text-sm font-medium leading-tight truncate">{c.f.t}</div>
-                <div className="text-xs text-faint">{c.f.a}{c.f.rt ? ` · ${c.f.rt} min` : ""}</div>
+              <TarjetaPelicula f={c.f} onClick={() => onFicha(c.id)}
+                insignia={<>{sorpresa == null && i < 3 ? `#${i + 1} · ` : ""}{porcentajeScore(c.s)}%</>}>
                 {c.r.length > 0 && (
                   <div className="text-[11px] text-marquee/80 truncate" title={porques(c.r).join(" · ")}>
                     {porques(c.r.slice(0, 2)).join(" · ")}
@@ -97,7 +93,7 @@ export default function Noche({ onFicha }: { onFicha: (id: number) => void }) {
                 <div className="mt-1 h-1 rounded-full bg-hairline overflow-hidden">
                   <div className="h-full bg-marquee" style={{ width: `${c.s * 100}%` }} />
                 </div>
-              </button>
+              </TarjetaPelicula>
             </Item>
           ))}
         </div>
@@ -105,6 +101,36 @@ export default function Noche({ onFicha }: { onFicha: (id: number) => void }) {
       {sorpresa != null && (
         <Item className="mt-5"><button type="button" onClick={() => setSorpresa(null)} className="text-sm text-marquee hover:underline">← volver a la lista completa</button></Item>
       )}
+    </Bloque>
+    {grupos.length > 0 && <PorqueTeGusto grupos={grupos} notaMin={gusto.porque.nota_min} onFicha={onFicha} />}
+    </>
+  );
+}
+
+// "Porque te gustó X": lo que TMDB recomienda a partir de tus favoritas. No depende del
+// dataset de 2017, así que aquí sí aparecen estrenos.
+function PorqueTeGusto({ grupos, notaMin, onFicha }: { grupos: GrupoConFichas[]; notaMin: number; onFicha: (id: number) => void }) {
+  const [elegida, setElegida] = useState(grupos[0].origen.id);
+  const grupo = grupos.find((g) => g.origen.id === elegida) ?? grupos[0];
+  return (
+    <Bloque kicker="Capítulo 4 · desde tus favoritas"
+      titulo={<>Porque te gustó <span className="text-marquee">{grupo.origen.f.t}</span></>}
+      intro={<>Lo que TMDB recomienda a partir de tus {formatoNumero(grupos.length)} favoritas en Trakt (nota {notaMin} o más), sin
+        lo que ya viste. Aquí sí entran estrenos: estas sugerencias no salen del dataset de 2017.</>}>
+      <Item className="mt-6"><div data-testid="porque-favoritas" className="flex flex-wrap gap-2">
+        {grupos.map((g) => (
+          <Chip key={g.origen.id} activo={g.origen.id === grupo.origen.id} onClick={() => setElegida(g.origen.id)}>
+            {g.origen.f.t} <span className="tabular-nums opacity-70">· {g.n}</span>
+          </Chip>
+        ))}
+      </div></Item>
+      <div data-testid="porque" className="mt-7 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-4">
+        {grupo.recs.map((r) => (
+          <Item key={r.id}>
+            <TarjetaPelicula f={r.f} onClick={() => onFicha(r.id)} />
+          </Item>
+        ))}
+      </div>
     </Bloque>
   );
 }

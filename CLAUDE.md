@@ -30,3 +30,4 @@ gusto. Sitio estático en GitHub Pages, embebido en su portfolio (samtho.github.
 - Ningún número del historial o del modelo se escribe a mano en la UI: sale de los datos.
 - Secretos y datos personales crudos fuera de git: clave de TMDB en `.env`, export de Trakt y CSV en `pipeline/raw/` (ignorado).
 - El universo de películas (dataset de Kaggle) está congelado en 2017. Galaxia, similares e industria no cambian al refrescar; lo que cambia es el historial.
+  Excepción: "porque te gustó X" (Esta noche) trae sugerencias de la API de TMDB sin límite de año, a partir de tus favoritas.

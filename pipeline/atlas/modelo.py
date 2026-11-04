@@ -24,11 +24,34 @@ from . import config
 N_COMPONENTES_TEXTO = 24
 
 
+def texto_pelicula(sinopsis: str, generos: Iterable[str], keywords: Iterable[str]) -> str:
+    """El texto que describe una película en el espacio de contenido (las keywords pesan doble)."""
+    return f"{sinopsis} {' '.join(generos)} {' '.join(keywords) * 2}"
+
+
+@dataclass
+class EspacioTexto:
+    """Embeddings del dataset y la transformación ya ajustada, para proyectar películas nuevas."""
+    E: np.ndarray
+    vectorizador: TfidfVectorizer
+    svd: TruncatedSVD
+
+    def proyectar(self, textos: list[str]) -> np.ndarray:
+        return self.svd.transform(self.vectorizador.transform(textos))
+
+
+def ajustar_texto(md: pd.DataFrame, componentes: int = 128, min_df: int = 3, max_features: int = 50_000) -> EspacioTexto:
+    # misma fórmula que texto_pelicula, en vectorizado
+    texto = md.overview.fillna("") + " " + md.genres_l.str.join(" ") + " " + md.kw_l.str.join(" ") * 2
+    vectorizador = TfidfVectorizer(max_features=max_features, stop_words="english", min_df=min_df)
+    svd = TruncatedSVD(componentes, random_state=config.SEMILLA)
+    E = svd.fit_transform(vectorizador.fit_transform(texto))
+    return EspacioTexto(E=E, vectorizador=vectorizador, svd=svd)
+
+
 def embeddings_texto(md: pd.DataFrame, componentes: int = 128, min_df: int = 3, max_features: int = 50_000) -> np.ndarray:
     """Vector de contenido por película (una fila por fila de md, mismo orden)."""
-    texto = md.overview.fillna("") + " " + md.genres_l.str.join(" ") + " " + md.kw_l.str.join(" ") * 2
-    tfidf = TfidfVectorizer(max_features=max_features, stop_words="english", min_df=min_df).fit_transform(texto)
-    return TruncatedSVD(componentes, random_state=config.SEMILLA).fit_transform(tfidf)
+    return ajustar_texto(md, componentes, min_df, max_features).E
 
 
 Featurizador = Callable[[pd.DataFrame], pd.DataFrame]
@@ -146,6 +169,25 @@ def porques(modelo: Pipeline, F: pd.DataFrame) -> Porques:
                 leyenda.append(nombre)
             razones.append(indice[nombre])
         por_fila.append(razones)
+    return Porques(leyenda=leyenda, por_fila=por_fila)
+
+
+def anteponer(razones: Porques, etiquetas: list[str | None]) -> Porques:
+    """Antepone una etiqueta a los porqués de cada fila que la tenga (None: sin cambio).
+
+    Las razones que vienen de fuera del modelo P(ver) (tus notas, la calidad) van primero.
+    """
+    leyenda = list(razones.leyenda)
+    indice = {nombre: i for i, nombre in enumerate(leyenda)}
+    por_fila = []
+    for fila, nombre in zip(razones.por_fila, etiquetas, strict=True):
+        if nombre is None or indice.get(nombre) in fila:
+            por_fila.append(fila)
+            continue
+        if nombre not in indice:
+            indice[nombre] = len(leyenda)
+            leyenda.append(nombre)
+        por_fila.append([indice[nombre], *fila[:MAX_PORQUES - 1]])
     return Porques(leyenda=leyenda, por_fila=por_fila)
 
 

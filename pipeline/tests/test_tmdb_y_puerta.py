@@ -5,7 +5,8 @@ import urllib.error
 import pytest
 
 from atlas.puerta import revisar
-from atlas.tmdb import ErrorTMDB, NoExisteEnTMDB, clave_api, completar, crear_pedidor, ficha_desde_api, ficha_minima
+from atlas.tmdb import (ErrorTMDB, NoExisteEnTMDB, clave_api, completar, crear_pedidor, ficha_desde_api, ficha_minima,
+                        texto_desde_api)
 
 CLAVE = "clave-secreta-123"
 
@@ -195,3 +196,10 @@ def test_puerta(previo, nuevo, aprobado):
 def test_puerta_avisa_del_cambio_de_metodo():
     v = revisar(gusto(metodo=1), gusto(metodo=2))
     assert any("método" in a for a in v.avisos)
+
+
+def test_texto_desde_api_completo_y_vacio():
+    d = {"overview": "Una sinopsis larga", "genres": [{"name": "Horror"}], "vote_average": 7.26,
+         "keywords": {"keywords": [{"name": "ghost"}, {"name": "house"}]}}
+    assert texto_desde_api(d) == {"o": "Una sinopsis larga", "g": ["Horror"], "kw": ["ghost", "house"], "va": 7.3}
+    assert texto_desde_api({}) == {"o": "", "g": [], "kw": [], "va": None}

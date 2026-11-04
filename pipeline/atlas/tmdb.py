@@ -1,14 +1,19 @@
 """Paso con red: completa desde la API de TMDB lo que el atlas no tiene.
 
 - Fichas de las películas vistas que no están en el dataset (posteriores a 2017).
+- Textos de tus películas calificadas fuera del dataset (sinopsis completa, géneros y
+  keywords): las colocan en el espacio de contenido del modelo (atlas/notas.py).
+- Recomendaciones de TMDB para tus favoritas y las fichas de las que se van a mostrar
+  en "porque te gustó X" (atlas/recomendaciones.py).
 - Títulos en español de todas las fichas (la búsqueda de la web usa los dos).
 
 Necesita la clave en la variable TMDB_API_KEY o en pipeline/.env (TMDB_API_KEY=...).
 Ese archivo está fuera de git. La clave nunca se imprime.
 
 Uso (desde pipeline/):  python -m atlas.tmdb --trakt raw/<export>.zip --raw raw --data ../public/data
-Lo ya descargado queda en caché (raw/tmdb_cache.json, raw/titulos_es.json): si se corta,
-se vuelve a lanzar y sigue donde iba.
+Lo ya descargado queda en caché (raw/tmdb_cache.json, raw/tmdb_textos.json,
+raw/tmdb_recomendaciones.json, raw/titulos_es.json): si se corta, se vuelve a lanzar y
+sigue donde iba. Las recomendaciones de una favorita se piden una sola vez.
 """
 
 from __future__ import annotations
@@ -28,7 +33,9 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any
 
-from .archivos import escribir_json, leer_json
+from . import config
+from .archivos import escribir_json, leer_cache, leer_json
+from .recomendaciones import grupos_porque, recomendaciones_desde_api
 from .trakt import ErrorExport, cargar_export
 
 API = "https://api.themoviedb.org/3"
@@ -123,6 +130,26 @@ def ficha_desde_api(d: dict[str, Any]) -> dict[str, Any]:
         "c": [c["name"] for c in reparto],
         "cp": [c.get("profile_path") for c in reparto],
     }
+
+
+TEXTO_VACIO: dict[str, Any] = {"o": "", "g": [], "kw": [], "va": None}
+
+
+def texto_desde_api(d: dict[str, Any]) -> dict[str, Any]:
+    """Respuesta de /movie/{id}?append_to_response=keywords -> texto para el espacio de contenido."""
+    return {
+        "o": d.get("overview") or "",
+        "g": [g["name"] for g in d.get("genres", [])],
+        "kw": [k["name"] for k in (d.get("keywords") or {}).get("keywords", [])],
+        "va": round(float(d["vote_average"]), 1) if d.get("vote_average") else None,
+    }
+
+
+
+def avisar_fallidos(fallidos: list[tuple[int, str]], que: str) -> None:
+    """Fallos de un extra (no bloquean): se avisan y se reintentan en el próximo refresco."""
+    if fallidos:
+        print(f"Aviso: {len(fallidos)} {que} quedaron pendientes; se pedirán en el próximo refresco.")
 
 
 def completar(ids: Iterable[int], cache: dict[str, Any], pedir: Pedidor, ruta: Callable[[int], str],
@@ -227,17 +254,40 @@ def _completar_todo(a: argparse.Namespace) -> int:
             print(f"  {tmdb}: {motivo}", file=sys.stderr)
         return 1
 
+    # textos de tus calificadas fuera del dataset: sin ellos, esas notas no cuentan en la afinidad
+    ruta_textos = a.raw / "tmdb_textos.json"
+    textos = leer_cache(ruta_textos)
+    calificadas = sorted(t for t in export.notas if t not in en_dataset)
+    print(f"Textos de tus notas: {sum(1 for t in calificadas if str(t) not in textos)} por pedir (de {len(calificadas)})")
+    avisar_fallidos(completar(calificadas, textos, pedir, lambda t: f"/movie/{t}", {"append_to_response": "keywords"},
+                              texto_desde_api, guardar=lambda: escribir_json(ruta_textos, textos), etiqueta="textos",
+                              si_no_existe=lambda t: TEXTO_VACIO), "textos")
+
+    # "porque te gustó X": recomendaciones de cada favorita y las fichas de las que se mostrarán
+    ruta_recs = a.raw / "tmdb_recomendaciones.json"
+    recs = leer_cache(ruta_recs)
+    con_nota_alta = sorted(t for t, n in export.notas.items() if n >= config.NOTA_FAVORITA)
+    print(f"Recomendaciones: {sum(1 for t in con_nota_alta if str(t) not in recs)} favoritas por pedir (de {len(con_nota_alta)})")
+    avisar_fallidos(completar(con_nota_alta, recs, pedir, lambda t: f"/movie/{t}/recommendations", {},
+                              recomendaciones_desde_api, guardar=lambda: escribir_json(ruta_recs, recs),
+                              etiqueta="recomendaciones", si_no_existe=lambda t: []), "recomendaciones")
+    grupos = grupos_porque(export, {int(k): v for k, v in recs.items()})
+    sugeridas = sorted({i for g in grupos for i in g["recs"]} - {int(k) for k in fichas})
+    print(f"Fichas sugeridas: {sum(1 for t in sugeridas if str(t) not in cache)} por pedir (de {len(sugeridas)})")
+    avisar_fallidos(completar(sugeridas, cache, pedir, lambda t: f"/movie/{t}", {"append_to_response": "credits"},
+                              ficha_desde_api, guardar=lambda: escribir_json(ruta_cache, cache), etiqueta="sugeridas"),
+                    "fichas sugeridas")
+
     if not a.sin_titulos:
         ruta_titulos = a.raw / "titulos_es.json"
         titulos = leer_json(ruta_titulos) if ruta_titulos.exists() else {}
-        todas = sorted({int(k) for k in fichas} | set(nuevas))
+        todas = sorted({int(k) for k in fichas} | set(nuevas) | set(sugeridas))
         print(f"Títulos en español: {sum(1 for t in todas if str(t) not in titulos)} por pedir (de {len(todas)})")
         sin_titulo = completar(todas, titulos, pedir, lambda t: f"/movie/{t}", {"language": "es-ES"},
                                lambda d: d.get("title") or "", guardar=lambda: escribir_json(ruta_titulos, titulos),
                                etiqueta="títulos", si_no_existe=lambda t: "")
         # los títulos son un extra de la búsqueda: si faltan algunos, no se bloquea el refresco
-        if sin_titulo:
-            print(f"Aviso: {len(sin_titulo)} títulos en español quedaron pendientes; se pedirán en el próximo refresco.")
+        avisar_fallidos(sin_titulo, "títulos en español")
     print("TMDB al día.")
     return 0
 

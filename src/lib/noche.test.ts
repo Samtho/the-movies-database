@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ficha } from "../test/fixtures";
 import {
   buscarPeliculas, decadasDe, elegirSorpresa, filtrarCandidatas, generosFrecuentes,
-  MINUTOS_MAX, unirCandidatas, type CandidataConFicha, type FiltrosNoche,
+  MINUTOS_MAX, porcentajeScore, unirCandidatas, unirPorque, type CandidataConFicha, type FiltrosNoche,
 } from "./noche";
 
 const cand = (id: number, f: Parameters<typeof ficha>[0], s = 0.5): CandidataConFicha => ({ id, s, r: [], f: ficha(f) });
@@ -78,4 +78,26 @@ describe("buscarPeliculas", () => {
   it("respeta el límite", () => expect(buscarPeliculas(fichas, "amel", 1)).toHaveLength(1));
   it("menos de 2 caracteres: nada", () => expect(buscarPeliculas(fichas, "a")).toEqual([]));
   it("sin coincidencias", () => expect(buscarPeliculas(fichas, "zzz")).toEqual([]));
+});
+
+describe("unirPorque", () => {
+  const fichas = { "1": ficha({ t: "Fav" }), "2": ficha({ t: "Otra fav" }), "10": ficha({ t: "A" }), "11": ficha({ t: "B" }) };
+  it("une favorita y sugerencias con su ficha, en orden", () => {
+    const res = unirPorque([{ id: 1, n: 9, recs: [11, 10] }], fichas);
+    expect(res.map((g) => [g.origen.f.t, g.n, g.recs.map((r) => r.f.t)])).toEqual([["Fav", 9, ["B", "A"]]]);
+  });
+  it("omite sugerencias sin ficha y grupos que se quedan vacíos o sin favorita", () => {
+    const res = unirPorque([{ id: 1, n: 9, recs: [99, 10] }, { id: 2, n: 8, recs: [98] }, { id: 77, n: 10, recs: [10] }], fichas);
+    expect(res.map((g) => [g.origen.id, g.recs.map((r) => r.id)])).toEqual([[1, [10]]]);
+  });
+  it("lista vacía", () => expect(unirPorque([], fichas)).toEqual([]));
+});
+
+describe("porcentajeScore", () => {
+  it("trunca y nunca llega a 100", () => {
+    expect(porcentajeScore(0.999)).toBe(99);
+    expect(porcentajeScore(1)).toBe(99);
+    expect(porcentajeScore(0.876)).toBe(87);
+    expect(porcentajeScore(0)).toBe(0);
+  });
 });

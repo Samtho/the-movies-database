@@ -26,6 +26,8 @@ export function gusto(parcial: Partial<Gusto> = {}): Gusto {
       n_sin_fecha: 0, techo: { mediana_pct: 1, top10: 80, top20: 90, p100: 9 }, metodo: 3,
     },
     segunda_etapa: { activa: false, notas: 5, notas_totales: 5, umbral: 150 },
+    notas: { activa: false, n: 5, rho: 0.05, rho_base: 0.5, minimo: 20, peso: 1, calidad_activa: false },
+    porque: { nota_min: 8, grupos: [] },
     ...parcial,
   };
 }

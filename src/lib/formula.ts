@@ -1,4 +1,5 @@
 // "La fórmula de tu gusto": torneo de modelos, coeficientes y backtest.
+import { formatoNumero } from "./format";
 import { generoEs } from "./generos";
 import { maximo, proporcion } from "./numeros";
 import type { Gusto } from "./schema";
@@ -23,3 +24,17 @@ export const pesoMaximo = (coefs: readonly { w: number }[]): number => maximo(co
 
 // La regresión logística es "el modelo simple": el relato del capítulo cambia si gana otro.
 export const esModeloSimple = (nombre: string | undefined): boolean => nombre != null && /regresi[oó]n log[ií]stica/i.test(nombre);
+
+// Qué dicen tus notas, en una frase: si ya ordenan "Esta noche" y, si no, qué las explica mejor.
+export function lecturaNotas(notas: Gusto["notas"]): string {
+  const rho = (x: number | null) => (x == null ? "sin dato" : formatoNumero(x, 2));
+  const comparacion = `la nota media de TMDB se correlaciona con tus notas (${rho(notas.rho_base)}) y el parecido de contenido con lo que calificaste (${rho(notas.rho)})`;
+  if (notas.n < notas.minimo) return `Con ${formatoNumero(notas.n)} notas aún no se puede medir qué predice tu gusto (hacen falta ${formatoNumero(notas.minimo)}).`;
+  const inicio = `Con tus ${formatoNumero(notas.n)} notas, ${comparacion}.`;
+  if (notas.activa && notas.calidad_activa) return `${inicio} Las dos superan al azar: "Esta noche" ya ordena también por ambas.`;
+  if (notas.activa) return `${inicio} El parecido supera al azar: "Esta noche" ya lo usa para ordenar.`;
+  if (notas.calidad_activa) {
+    return `${inicio} Por eso "Esta noche" ya ordena también por la nota media de TMDB; el parecido no supera al azar y todavía no cuenta.`;
+  }
+  return `${inicio} Ninguna supera al azar, así que todavía no cambian el orden de "Esta noche".`;
+}

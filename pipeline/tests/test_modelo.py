@@ -2,8 +2,8 @@ import numpy as np
 import pytest
 
 from atlas.backtest import backtest
-from atlas.modelo import (auc_validacion_cruzada, coeficientes_legibles, construir_features, embeddings_texto, entrenar,
-                          nombre_legible, porques)
+from atlas.modelo import (Porques, auc_validacion_cruzada, coeficientes_legibles, anteponer, construir_features,
+                          embeddings_texto, entrenar, nombre_legible, porques)
 
 
 @pytest.fixture
@@ -136,3 +136,16 @@ def test_backtest_deja_fuera_lo_visto_sin_fecha(md, E):
     assert (base["n_sin_fecha"], bt["n_sin_fecha"]) == (0, len(sin_fecha))
     assert bt["n_test"] == base["n_test"]  # no se evalúan como descubrimientos
     assert bt["n_cand"] == base["n_cand"] - len(sin_fecha)  # ni compiten como candidatas no vistas
+
+
+def test_anteponer_reutiliza_la_leyenda_y_no_repite():
+    razones = Porques(leyenda=["género drama", "su época"], por_fila=[[0, 1], [1], [], [0, 1], [1]])
+    salida = anteponer(razones, ["parecida a Rope", None, "parecida a Rope", "parecida a Heat", "su época"])
+    assert salida.leyenda == ["género drama", "su época", "parecida a Rope", "parecida a Heat"]
+    assert salida.por_fila == [[2, 0, 1], [1], [2], [3, 0, 1], [1]]  # la última ya la tenía
+    assert razones.leyenda == ["género drama", "su época"]  # no muta la entrada
+
+
+def test_anteponer_respeta_el_maximo_de_porques():
+    razones = Porques(leyenda=["a", "b", "c"], por_fila=[[0, 1, 2]])
+    assert anteponer(razones, ["X"]).por_fila == [[3, 0, 1]]

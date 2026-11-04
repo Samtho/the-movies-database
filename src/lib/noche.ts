@@ -1,8 +1,10 @@
 // "¿Qué veo esta noche?": candidatas no vistas del modelo de gusto, cruzadas con su ficha.
-import type { Candidata, Ficha, Fichas } from "./schema";
+import type { Candidata, Ficha, Fichas, GrupoPorque } from "./schema";
 import { coincide } from "./texto";
 
 export type CandidataConFicha = Candidata & { f: Ficha };
+export type PeliculaConFicha = { id: number; f: Ficha };
+export type GrupoConFichas = { origen: PeliculaConFicha; n: number; recs: PeliculaConFicha[] };
 export type FiltrosNoche = { genero: string | null; decada: number | null; maxMinutos: number };
 
 export const MINUTOS_MIN = 80;
@@ -42,6 +44,10 @@ export function generosFrecuentes(lista: readonly CandidataConFicha[], n = 10): 
   return [...cuenta.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, n).map(([g]) => g);
 }
 
+// Score en porcentaje para la insignia: truncado y como mucho 99. Al sumar la calidad, el
+// score de las primeras se acerca a 1 y redondeado diría "100%", una certeza que no existe.
+export const porcentajeScore = (s: number): number => Math.min(99, Math.max(0, Math.floor(s * 100)));
+
 // Una candidata al azar del top; null si no hay ninguna. `azar` inyectable para tests.
 export function elegirSorpresa(lista: readonly CandidataConFicha[], azar: () => number = Math.random, tope = TOPE_SORPRESA): number | null {
   const top = lista.slice(0, tope);
@@ -55,4 +61,19 @@ export function buscarPeliculas(fichas: Fichas, consulta: string, limite = 6): [
   const res: [number, Ficha][] = [];
   for (const [id, f] of Object.entries(fichas)) if (coincide(consulta, f.t, f.te)) res.push([Number(id), f]);
   return res.sort((a, b) => b[1].nv - a[1].nv).slice(0, limite);
+}
+
+// "Porque te gustó X": cada favorita con sus sugerencias, todas con ficha. Una sugerencia
+// sin ficha se omite; un grupo sin favorita o sin sugerencias que mostrar, también.
+export function unirPorque(grupos: readonly GrupoPorque[], fichas: Fichas): GrupoConFichas[] {
+  const salida: GrupoConFichas[] = [];
+  for (const g of grupos) {
+    const f = fichas[String(g.id)];
+    const recs = g.recs.flatMap((id) => {
+      const fr = fichas[String(id)];
+      return fr ? [{ id, f: fr }] : [];
+    });
+    if (f && recs.length > 0) salida.push({ origen: { id: g.id, f }, n: g.n, recs });
+  }
+  return salida;
 }

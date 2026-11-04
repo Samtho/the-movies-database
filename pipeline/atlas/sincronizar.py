@@ -2,8 +2,9 @@
 
 La galaxia, las similares y la industria no cambian (el dataset no cambia). Lo que sí
 cambia al refrescar es qué has visto, y eso vive repartido en tres archivos:
-- fichas.json: v=1 en las vistas; fichas nuevas para las vistas posteriores a 2017
-  (desde la caché de TMDB); título en español cuando se conoce.
+- fichas.json: v=1 en las vistas; fichas nuevas para las vistas posteriores a 2017 y
+  para las sugeridas de "porque te gustó X" (desde la caché de TMDB); título en español
+  cuando se conoce.
 - galaxia.json: v=1 enciende las vistas.
 - grafo.json: v de cada película; las vistas nuevas se enganchan a las personas que ya
   están en el grafo, y cada persona cuenta cuántas de sus películas has visto.
@@ -25,6 +26,7 @@ class ErrorSincronizacion(Exception):
 @dataclass
 class Informe:
     fichas_nuevas: list[int] = field(default_factory=list)
+    fichas_sugeridas: list[int] = field(default_factory=list)  # de "porque te gustó X", no vistas
     fichas_cambiadas: int = 0
     galaxia_cambiadas: int = 0
     grafo_nodos_nuevos: list[int] = field(default_factory=list)
@@ -64,12 +66,35 @@ def sincronizar_fichas(fichas: dict[str, Any], vistas: set[int], cache_tmdb: dic
         salida[str(v)] = {**_ficha_desde_cache(cache_tmdb[str(v)]), "v": 1, "reciente": 1}
         informe.fichas_nuevas.append(v)
     for clave, f in salida.items():
-        te = titulos_es.get(clave)
-        if te and te != f["t"]:
-            f["te"] = te
-            informe.titulos_es += 1
-        else:
-            f.pop("te", None)
+        _titulo_es(clave, f, titulos_es, informe)
+    return salida
+
+
+def _titulo_es(clave: str, f: dict[str, Any], titulos_es: dict[str, str], informe: Informe) -> None:
+    te = titulos_es.get(clave)
+    if te and te != f["t"]:
+        f["te"] = te
+        informe.titulos_es += 1
+    else:
+        f.pop("te", None)
+
+
+def agregar_sugeridas(fichas: dict[str, Any], ids: list[int], cache_tmdb: dict[str, Any], titulos_es: dict[str, str],
+                      informe: Informe) -> dict[str, Any]:
+    """Fichas (no vistas) de las películas de "porque te gustó X" que aún no tienen ficha.
+
+    Los ids ya vienen filtrados por tener ficha o caché; si alguno no la tiene, es un error.
+    """
+    salida = dict(fichas)
+    for i in ids:
+        clave = str(i)
+        if clave in salida:
+            continue
+        if clave not in cache_tmdb:
+            raise ErrorSincronizacion(f"La sugerida {i} no tiene ficha ni está en la caché de TMDB")
+        salida[clave] = {**_ficha_desde_cache(cache_tmdb[clave]), "v": 0, "reciente": 1}
+        _titulo_es(clave, salida[clave], titulos_es, informe)
+        informe.fichas_sugeridas.append(i)
     return salida
 
 

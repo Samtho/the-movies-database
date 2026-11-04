@@ -13,6 +13,11 @@ def leer_json(ruta: Path) -> Any:
     return json.loads(Path(ruta).read_text(encoding="utf-8"))
 
 
+def leer_cache(ruta: Path) -> dict[str, Any]:
+    """Una caché JSON que puede no existir todavía (vacía en ese caso)."""
+    return leer_json(ruta) if Path(ruta).exists() else {}
+
+
 def escribir_json(ruta: Path, contenido: Any) -> None:
     """Escribe en un temporal de la misma carpeta y lo renombra encima del destino."""
     ruta = Path(ruta)

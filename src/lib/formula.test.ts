@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { anchoAuc, coefsLegibles, esModeloSimple, ordenarBenchmark, pesoMaximo } from "./formula";
+import { anchoAuc, coefsLegibles, esModeloSimple, lecturaNotas, ordenarBenchmark, pesoMaximo } from "./formula";
 
 describe("ordenarBenchmark", () => {
   it("de mejor a peor, desempate por nombre", () => {
@@ -37,4 +37,20 @@ describe("esModeloSimple", () => {
     ["Random Forest", false],
     [undefined, false],
   ])("%s -> %s", (n, esperado) => expect(esModeloSimple(n)).toBe(esperado));
+});
+
+describe("lecturaNotas", () => {
+  const base = { activa: false, n: 88, rho: 0.053, rho_base: 0.57, minimo: 20, peso: 1, calidad_activa: true };
+  it("tu caso: la calidad ordena y el parecido todavía no", () => {
+    const t = lecturaNotas(base);
+    expect(t).toContain("88 notas");
+    expect(t).toContain("(0,57)");
+    expect(t).toContain("(0,05)");
+    expect(t).toContain("ya ordena también por la nota media de TMDB");
+  });
+  it("ninguna señal", () => expect(lecturaNotas({ ...base, calidad_activa: false })).toContain("Ninguna supera al azar"));
+  it("solo el parecido", () => expect(lecturaNotas({ ...base, activa: true, calidad_activa: false })).toContain("ya lo usa para ordenar"));
+  it("las dos", () => expect(lecturaNotas({ ...base, activa: true })).toContain("ordena también por ambas"));
+  it("pocas notas", () => expect(lecturaNotas({ ...base, n: 5 })).toContain("hacen falta 20"));
+  it("sin dato de correlación", () => expect(lecturaNotas({ ...base, rho: null, rho_base: null })).toContain("sin dato"));
 });

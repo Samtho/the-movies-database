@@ -1,6 +1,6 @@
 import pytest
 
-from atlas.sincronizar import (ErrorSincronizacion, Informe, sincronizar_fichas, sincronizar_galaxia,
+from atlas.sincronizar import (ErrorSincronizacion, Informe, agregar_sugeridas, sincronizar_fichas, sincronizar_galaxia,
                                sincronizar_grafo)
 
 FICHA = {"t": "Vieja", "a": 2000, "g": ["Drama"], "d": "Ana", "dp": None, "c": ["Luis"], "cp": [None], "rt": 90, "va": 7.0, "nv": 10, "p": None, "o": ""}
@@ -77,3 +77,17 @@ def test_grafo_desmarca_y_no_engancha_huerfanas():
 def test_grafo_es_determinista():
     fichas = {"1": {**FICHA, "v": 1}, "9": {**CACHE_NUEVA, "v": 1}}
     assert sincronizar_grafo(grafo_base(), fichas, {1, 9}, Informe()) == sincronizar_grafo(grafo_base(), fichas, {1, 9}, Informe())
+
+
+def test_sugeridas_se_agregan_no_vistas_con_titulo_y_sin_tocar_las_existentes():
+    inf = Informe()
+    fichas = {"1": {**FICHA, "v": 0}}
+    out = agregar_sugeridas(fichas, [1, 9], {"9": CACHE_NUEVA}, {"9": "Nueva en español"}, inf)
+    assert out["1"] == fichas["1"]
+    assert out["9"]["v"] == 0 and out["9"]["reciente"] == 1 and out["9"]["te"] == "Nueva en español"
+    assert inf.fichas_sugeridas == [9] and "9" not in fichas  # no muta la entrada
+
+
+def test_sugerida_sin_ficha_ni_cache_falla():
+    with pytest.raises(ErrorSincronizacion, match="sugerida 7"):
+        agregar_sugeridas({}, [7], {}, {}, Informe())

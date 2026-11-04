@@ -1,6 +1,6 @@
 import { EstadoCarga } from "../components/EstadoCarga";
 import { Bloque, Card, CountUp, Item } from "../components/ui";
-import { anchoAuc, coefsLegibles, esModeloSimple, ordenarBenchmark, pesoMaximo } from "../lib/formula";
+import { anchoAuc, coefsLegibles, esModeloSimple, lecturaNotas, ordenarBenchmark, pesoMaximo } from "../lib/formula";
 import { formatoNumero, numeroEnPalabras } from "../lib/format";
 import { proporcion } from "../lib/numeros";
 import { useDatos } from "../lib/useDatos";
@@ -93,6 +93,7 @@ export default function Formula() {
                 <span className="text-faint"> (de tus {formatoNumero(etapa.notas_totales)} notas; las de películas posteriores a 2017 aún no sirven al modelo)</span>
               )}
               {!etapa.activa && <span className="text-marquee">.</span>}</li>
+            <li><strong className="text-ivory">4 · Tus notas ya se miden.</strong> {lecturaNotas(g.notas)}</li>
           </ul>
         </Card>
       </div>

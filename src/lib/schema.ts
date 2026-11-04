@@ -82,6 +82,18 @@ export const GustoSchema = z.object({
   }),
   // notas: las que cuentan para el umbral (películas del dataset); notas_totales: todas las de Trakt
   segunda_etapa: z.object({ activa: z.boolean(), notas: entero, notas_totales: entero, umbral: entero }),
+  // tus notas en el orden (pipeline/atlas/notas.py): rho es la validación dejando fuera cada nota;
+  // rho_base, la nota media de TMDB frente a las tuyas. Cada una se aplica al orden (activa,
+  // calidad_activa) solo con señal por encima del azar.
+  notas: z.object({
+    activa: z.boolean(), n: entero, rho: z.number().nullable(), rho_base: z.number().nullable(), minimo: entero, peso: z.number(),
+    calidad_activa: z.boolean(),
+  }),
+  // "porque te gustó X": recomendaciones de TMDB para tus favoritas (nota >= nota_min), sin las vistas
+  porque: z.object({
+    nota_min: entero.min(1).max(10),
+    grupos: z.array(z.object({ id: entero, n: entero.min(1).max(10), recs: z.array(entero).min(1) })),
+  }),
 });
 
 // ---------- industria.json ----------
@@ -143,6 +155,7 @@ export type Nodo = z.infer<typeof NodoSchema>;
 export type Grafo = z.infer<typeof GrafoSchema>;
 export type Gusto = z.infer<typeof GustoSchema>;
 export type Candidata = z.infer<typeof CandidataSchema>;
+export type GrupoPorque = Gusto["porque"]["grupos"][number];
 export type Industria = z.infer<typeof IndustriaSchema>;
 export type Vistas = z.infer<typeof VistasSchema>;
 export type Stats = z.infer<typeof StatsSchema>;

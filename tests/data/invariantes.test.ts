@@ -38,6 +38,23 @@ describe("candidatas de 'Esta noche'", () => {
   });
 });
 
+describe("porque te gustó", () => {
+  const { nota_min, grupos } = gusto.porque;
+  const sugeridas = grupos.flatMap((g) => g.recs);
+  it("12. favoritas y sugeridas tienen ficha", () => {
+    expect(grupos.map((g) => g.id).filter((id) => !tieneFicha(id))).toEqual([]);
+    expect(sugeridas.filter((id) => !tieneFicha(id))).toEqual([]);
+  });
+  it("13. ninguna sugerida está vista ni se repite", () => {
+    expect(sugeridas.filter(vista)).toEqual([]);
+    expect(duplicados(sugeridas)).toBe(0);
+  });
+  it("14. las favoritas tienen la nota mínima y van de mayor a menor nota", () => {
+    expect(grupos.filter((g) => g.n < nota_min)).toEqual([]);
+    expect(grupos.filter((g, i) => i > 0 && g.n > grupos[i - 1].n)).toEqual([]);
+  });
+});
+
 describe("similares", () => {
   it("6. claves y sugerencias tienen ficha", () => {
     const rotas = Object.entries(similares).filter(([k, l]) => !(k in fichas) || l.some((id) => !tieneFicha(id)));
